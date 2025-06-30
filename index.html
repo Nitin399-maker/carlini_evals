@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Evaluation Results</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container-fluid py-3" style="transform: scale(0.8); transform-origin: top center;">
+        <h4 class="text-center mb-3">Model Evaluation Dashboard</h4>
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white py-2">
+                <h6 class="mb-0 small">Test Cases Performance Comparison</h6>
+            </div>
+            <div id="loadingContainer" class="text-center p-3">
+                <div class="spinner-border text-primary mb-2 small" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted small">Loading evaluation results...</p>
+            </div>
+            <div id="tableContainer" class="table-responsive" style="display: none;">
+                <table id="resultsTable" class="table table-sm table-bordered border-dark">
+                    <thead>
+                        <tr id="headerRow" class="table-light border border-dark">
+                            <th class="text-center align-middle border border-dark small py-2" style="width: 160px">Test Case</th>
+                            <th class="text-center align-middle border border-dark small py-2" style="width: 96px">% Win</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="border border-dark"></tbody>
+                    <tfoot>
+                        <tr id="footerRow" class="table-light border border-dark">
+                            <td class="border border-dark small py-2">Overall Success Rate</td>
+                            <td class="border border-dark"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="scripts.js"></script>
+</body>
+</html>
