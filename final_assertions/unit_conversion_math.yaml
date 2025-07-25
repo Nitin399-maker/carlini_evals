@@ -1,0 +1,23 @@
+description: "Test if a model can do basic math with some EE equations."
+providers:
+  - id: openai:o3
+    config: 
+      max_tokens: 8192
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if a model can do basic math with some EE equations."
+    vars:
+      prompt: "I measure a voltage drop of 30mv over a 2.5 ohm resistor. How long will a 3Ah battery last? Write your ansser 'XXX hours'"
+    assert:
+      - type: python
+        value: "file://unit_conversion_math.py:check_battery_calculation"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

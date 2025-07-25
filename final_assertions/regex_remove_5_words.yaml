@@ -1,0 +1,23 @@
+description: "Test if the model can write a Python function with a straightforward regex."
+providers:
+- id: openai:chat:o3-mini
+  config:
+    max_tokens: 8192
+    reasoning_effort: high
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if the model can write a Python function with a straightforward regex."
+    vars:
+      prompt: |
+        Write a function called `match` in Python that uses a regex to find any word repeated 5 times or more. Return that word. If no word is repeated 5 times or more, return an empty string and return the code in ```python ``` literals.
+    assert:
+      - type: python
+        value: "file://regex_remove_5_words.py:assert_regex_function"
+
+writeLatestResults: true
+commandLineOptions:
+  cache: true

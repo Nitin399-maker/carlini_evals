@@ -1,0 +1,25 @@
+
+description: "Test the knowledge cutoff of the model to see if it knows the LLAMA-2 hidden dimension size."
+providers:
+  - id: openai:o3
+    config: 
+      max_tokens: 8192
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test the knowledge cutoff of the model to see if it knows the LLAMA-2 hidden dimension size."
+    vars:
+      prompt: |-
+        What is the hidden dimension of LLAMA-2 70b?
+    assert:
+      - type: python
+        value: "file://knowledge_llama.py:get_assert"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

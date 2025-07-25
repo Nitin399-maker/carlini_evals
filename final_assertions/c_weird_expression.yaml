@@ -1,0 +1,24 @@
+description: "This test case is meant to test if the model can correctly evaluate a complex C expression."
+providers:
+- id: openai:chat:o4-mini
+  config:
+    max_tokens: 8192
+    reasoning_effort: high
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "This test case is meant to test if the model can correctly evaluate a complex C expression."
+    vars:
+      prompt: "What does the c expression `-~++*x--` evaluate to in simplest form? Ignore side effects. Write 'Final answer:' and then give your answer."
+    assert:
+      - type: python
+        value: "file://c_weird_expression.py:assert_correct_c_expression"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

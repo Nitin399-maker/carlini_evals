@@ -1,0 +1,23 @@
+description: "Test if a model can run an incremental update of a bash command without overwriting files that already exist"
+providers:
+  - id: openai:o3
+    config: 
+      max_tokens: 8192
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if a model can run an incremental update of a bash command without overwriting files that already exist"
+    vars:
+      prompt: "Run find . -name *.pdf -exec python3 process.py {} txt/{}.txt \  but don\t rewrite files that already exist. Instead of .pdf.txt make it just .txt"
+    assert:
+      - type: python
+        value: "file://bash_convert_not_overwrite.py:test_bash_incremental_update"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

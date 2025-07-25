@@ -1,0 +1,21 @@
+description: "Test if the model can generate a basic python program that prints "
+providers:
+  - {id: openrouter:openai/o3-mini-high, config: { max_tokens: 8192 }}
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if the model can generate a basic python program that prints "
+    vars:
+      prompt: Write a python program that prints the string "hello world" and tell me how it works in a sentence and return the code in ```python  ``` literals.
+    assert:
+      - type: python
+        value: "file://print_hello.py:assert_python_hello_world"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

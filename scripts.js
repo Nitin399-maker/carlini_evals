@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => processData(data))
         .catch(error => {
             console.error('Error loading data:', error);
-            document.getElementById('loadingContainer').innerHTML = 
+            document.getElementById('loadingContainer').innerHTML =
                 '<div class="alert alert-danger small">Error loading evaluation results.</div>';
         });
 
@@ -13,12 +13,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const modelMap = new Map();
         const testCaseMap = new Map();
         const testCaseDescriptions = new Map();
-        
+
         results.forEach(result => {
             const modelId = result.provider.id;
             const modelLabel = result.provider.label || modelId;
             if (!modelMap.has(modelId)) modelMap.set(modelId, modelLabel);
-            
+
             let testCaseName = '';
             if (result.gradingResult?.componentResults?.[0]?.assertion?.value) {
                 const assertValue = result.gradingResult.componentResults[0].assertion.value;
@@ -30,27 +30,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             }
-            
+
             if (testCaseName && !testCaseMap.has(testCaseName)) {
                 testCaseMap.set(testCaseName, new Map());
                 if (result.testCase?.description) {
                     testCaseDescriptions.set(testCaseName, result.testCase.description);
                 }
             }
-            
+
             if (testCaseName) {
                 const testCaseResults = testCaseMap.get(testCaseName);
                 if (!testCaseResults.has(modelId)) {
                     testCaseResults.set(modelId, { passes: 0, total: 0, reasons: [] });
                 }
-                
                 const resultData = testCaseResults.get(modelId);
                 resultData.total++;
-                
                 if (result.gradingResult?.componentResults?.[0]?.pass) {
                     resultData.passes++;
                 }
-                
                 if (result.gradingResult?.componentResults?.[0]?.reason) {
                     resultData.reasons.push(result.gradingResult.componentResults[0].reason);
                 }
@@ -60,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const testCases = Array.from(testCaseMap.keys());
         const testCaseOverallResults = new Map();
         const modelOverallResults = new Map();
-        
+
         testCases.forEach(testCase => {
             let totalPasses = 0, totalRuns = 0;
             modelMap.forEach((_, modelId) => {
@@ -92,14 +89,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        const sortedTestCases = testCases.sort((a, b) => 
+        const sortedTestCases = testCases.sort((a, b) =>
             testCaseOverallResults.get(b).winPercentage - testCaseOverallResults.get(a).winPercentage);
-        const sortedModels = Array.from(modelMap.entries()).sort((a, b) => 
+        const sortedModels = Array.from(modelMap.entries()).sort((a, b) =>
             modelOverallResults.get(b[0]).successRate - modelOverallResults.get(a[0]).successRate);
-
         const headerRow = document.getElementById('headerRow');
         const tableBody = document.getElementById('tableBody');
-        
+
         sortedModels.forEach(([_, modelLabel]) => {
             const th = document.createElement('th');
             th.className = 'text-center align-middle border border-dark small py-2';
@@ -111,39 +107,49 @@ document.addEventListener('DOMContentLoaded', function() {
         sortedTestCases.forEach(testCase => {
             const row = document.createElement('tr');
             row.className = 'border border-dark';
-            
             const testCaseCell = document.createElement('td');
             testCaseCell.className = 'small fw-medium border border-dark py-2';
-            testCaseCell.textContent = testCase;
+            // Create a clickable link element
+            const testCaseLink = document.createElement('a');
+            testCaseLink.className = 'test-case-link';
+            testCaseLink.textContent = testCase;
+            testCaseLink.href = `final_assertions/${testCase}.yaml`;
+            testCaseLink.target = '_blank'; // Opens in new tab
+            // Alternative: If you want to handle the click with JavaScript (for more control)
+            testCaseLink.onclick = function(e) {
+                e.preventDefault();
+                handleTestCaseClick(testCase);
+            };
+
             if (testCaseDescriptions.has(testCase)) {
-                testCaseCell.setAttribute('data-bs-toggle', 'tooltip');
-                testCaseCell.setAttribute('data-bs-placement', 'right');
-                testCaseCell.setAttribute('title', testCaseDescriptions.get(testCase));
+                testCaseLink.setAttribute('data-bs-toggle', 'tooltip');
+                testCaseLink.setAttribute('data-bs-placement', 'right');
+                testCaseLink.setAttribute('title', testCaseDescriptions.get(testCase));
             }
-            row.appendChild(testCaseCell);
             
+            testCaseCell.appendChild(testCaseLink);
+            row.appendChild(testCaseCell);
+
             const winPercentage = testCaseOverallResults.get(testCase).winPercentage;
             const winCell = document.createElement('td');
             winCell.className = 'text-center border border-dark small py-2';
             winCell.textContent = `${winPercentage.toFixed(1)}%`;
             addPerformanceClass(winCell, winPercentage);
             row.appendChild(winCell);
-            
+
             sortedModels.forEach(([modelId]) => {
                 const cell = document.createElement('td');
                 cell.className = 'text-center border border-dark small py-2';
-                
                 const modelResults = testCaseMap.get(testCase)?.get(modelId);
                 if (modelResults) {
                     const passRate = (modelResults.passes / modelResults.total) * 100;
                     cell.textContent = `${modelResults.passes}/${modelResults.total}`;
                     addPerformanceClass(cell, passRate);
-                    
                     if (modelResults.reasons.length > 0) {
                         cell.setAttribute('data-bs-toggle', 'tooltip');
                         cell.setAttribute('data-bs-placement', 'top');
                         cell.setAttribute('data-bs-html', 'true');
-                        cell.setAttribute('title', modelResults.reasons.map((reason, i) => 
+                        cell.setAttribute('title', modelResults.reasons.map((reason, i) =>
                             `Test ${i + 1}: ${reason}`).join('<br>'));
                     }
                 } else {
@@ -157,7 +163,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const footerRow = document.getElementById('footerRow');
         footerRow.children[1].textContent = '';
-        
         sortedModels.forEach(([modelId]) => {
             const cell = document.createElement('td');
             cell.className = 'text-center fw-bold border border-dark small py-2';
@@ -174,7 +179,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('loadingContainer').style.display = 'none';
         document.getElementById('tableContainer').style.display = 'block';
     }
-    
+
+    // Function to handle test case clicks
+    function handleTestCaseClick(testCaseName) {
+        const yamlPath = `final_assertions/${testCaseName}.yaml`;
+        window.open(yamlPath, '_blank');
+    }
+
     function addPerformanceClass(element, percentage) {
         if (percentage >= 80) element.classList.add('table-success');
         else if (percentage >= 60) element.classList.add('table-primary');

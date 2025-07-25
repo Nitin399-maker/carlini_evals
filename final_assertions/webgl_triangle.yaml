@@ -1,0 +1,21 @@
+description: "Test if the model can generate an HTML file with WebGL code that draws an image."
+providers:
+  - {id: openrouter:openai/o3-mini-high, config: { max_tokens: 8192 }}
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if the model can generate an HTML file with WebGL code that draws an image."
+    vars:
+      prompt: Draw an image of a house with a chimney using WebGL in a single HTML file. Make the canvas take the full page.
+    assert:
+      - type: python
+        value: "file://webgl_triangle.py:check_html_webgl_house"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

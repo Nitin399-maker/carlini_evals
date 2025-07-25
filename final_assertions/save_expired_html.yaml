@@ -1,0 +1,24 @@
+description: "Test if a model knows how to get the HTML for the entire webpage; not just the body."
+providers:
+  - id: openrouter:anthropic/claude-3.7-sonnet
+    config: 
+      max_tokens: 8192
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if a model knows how to get the HTML for the entire webpage; not just the body."
+    vars:
+      prompt: |-
+        I have a webpage that's open in a chrome browser but the page no longer exists. What javascript should I type in the console to get a copy of the entire page html?
+    assert:
+      - type: python
+        value: "file://save_expired_html.py:assert_html_recovery_knowledge"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

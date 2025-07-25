@@ -1,0 +1,31 @@
+description: "Test if a model correctly understands how advanced indexing works in numpy."
+providers:
+  - {id: openrouter:anthropic/claude-3.7-sonnet, config: { max_tokens: 8192 }}
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if a model correctly understands how advanced indexing works in numpy."
+    vars:
+      prompt: |-
+        What will this program print:
+
+        ```python
+        import numpy as np
+
+        array = np.zeros((10, 20, 30))
+        idxs = [1, 2, 3]
+
+        print(array[idxs])
+        ```
+    assert:
+      - type: python
+        value: "file://numpy_advanced_index.py:assert_numpy_advanced_indexing"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

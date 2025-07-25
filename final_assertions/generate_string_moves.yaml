@@ -1,0 +1,25 @@
+description: "Test if the model can write code to perform string slicing with vague instructions."
+providers:
+- id: openai:chat:o3-mini
+  config:
+    max_tokens: 8192
+    reasoning_effort: high
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if the model can write code to perform string slicing with vague instructions."
+    vars:
+      prompt: |-
+        Write me a function called `move` that, given a string x, returns all possible alternate strings y' such that y' is derived from x by moving a substring of x to an arbitrary position and return the code in ```python ``` literals and do not inlcude hypen in code.
+    assert:
+      - type: python
+        value: "file://generate_string_moves.py:check"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true
