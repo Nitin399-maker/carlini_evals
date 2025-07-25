@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!modelMap.has(modelId)) modelMap.set(modelId, modelLabel);
             
             let testCaseName = '';
-            if (result.testCase?.assert?.[0]?.value) {
-                const assertValue = result.testCase.assert[0].value;
+            if (result.gradingResult?.componentResults?.[0]?.assertion?.value) {
+                const assertValue = result.gradingResult.componentResults[0].assertion.value;
                 if (assertValue.includes('://')) {
                     const parts = assertValue.split('://');
                     if (parts.length > 1) {
@@ -46,8 +46,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const resultData = testCaseResults.get(modelId);
                 resultData.total++;
-                if (result.gradingResult?.pass) resultData.passes++;
-                if (result.gradingResult?.reason) resultData.reasons.push(result.gradingResult.reason);
+                
+                if (result.gradingResult?.componentResults?.[0]?.pass) {
+                    resultData.passes++;
+                }
+                
+                if (result.gradingResult?.componentResults?.[0]?.reason) {
+                    resultData.reasons.push(result.gradingResult.componentResults[0].reason);
+                }
             }
         });
 
@@ -91,6 +97,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const sortedModels = Array.from(modelMap.entries()).sort((a, b) => 
             modelOverallResults.get(b[0]).successRate - modelOverallResults.get(a[0]).successRate);
 
+        const headerRow = document.getElementById('headerRow');
+        const tableBody = document.getElementById('tableBody');
+        
         sortedModels.forEach(([_, modelLabel]) => {
             const th = document.createElement('th');
             th.className = 'text-center align-middle border border-dark small py-2';
@@ -133,8 +142,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (modelResults.reasons.length > 0) {
                         cell.setAttribute('data-bs-toggle', 'tooltip');
                         cell.setAttribute('data-bs-placement', 'top');
+                        cell.setAttribute('data-bs-html', 'true');
                         cell.setAttribute('title', modelResults.reasons.map((reason, i) => 
-                            `Test ${i + 1}: ${reason}`).join('\n'));
+                            `Test ${i + 1}: ${reason}`).join('<br>'));
                     }
                 } else {
                     cell.textContent = '0/0';
