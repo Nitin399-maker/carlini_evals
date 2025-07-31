@@ -1,0 +1,23 @@
+
+description: "This test case is designed to check if the model can print out the tokens in a AutoTokenizer's vocabulary."
+providers:
+  - {id: openrouter:anthropic/claude-3.7-sonnet, config: { max_tokens: 8192 }}
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "This test case is designed to check if the model can print out the tokens in a AutoTokenizer's vocabulary."
+    vars:
+      prompt: |-
+        How do I get all tokens in a AutoTokenizer?
+    assert:
+      - type: python
+        value: "file://tokenizer_vocab.py:assert_contains_get_vocab"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

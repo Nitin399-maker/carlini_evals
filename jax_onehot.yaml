@@ -1,0 +1,20 @@
+description: "Test if the model can correctly convert a list of indexes to a one-hot vector in Python using JAX."
+providers:
+    - openrouter:openai/gpt-4o
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if the model can correctly convert a list of indexes to a one-hot vector in Python using JAX."
+    vars:
+      prompt: |-
+        I have a list of indexes and I want to convert it to a one-hot vector using JAX. The function should be jittable and should be named one_hot. It should take two arguments: the first one is the indexes and the second one is the number of possible labels. Just give me the code and and return the code in ```python literals and do not include hypen in code..
+    assert:
+      - type: python
+        value: "file://jax_onehot.py:check_jax_one_hot"
+
+writeLatestResults: true
+commandLineOptions:
+  cache: true

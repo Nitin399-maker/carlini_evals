@@ -1,0 +1,28 @@
+
+description: "Test if the model can shorten a line of python with an equal line."
+providers:
+  - {id: openrouter:openai/o3-mini-high, config: { max_tokens: 8192 }}
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if the model can shorten a line of python with an equal line."
+    vars:
+      prompt: |-
+        Shorten this python code. Keep the name the same.
+        ```
+        def foo(arr, keys):
+        return [[x[y] if y in x else -5 for y in keys] for x in arr]
+        ```
+        return the shorten code in ```python ``` these literals.
+    assert:
+      - type: python
+        value: "file://shorten_python_if_missing.py:check_response"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    fetch('result.json')
+    fetch('result_final.json')
         .then(response => response.json())
         .then(data => processData(data))
         .catch(error => {

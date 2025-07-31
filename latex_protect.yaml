@@ -1,0 +1,23 @@
+
+description: "Test if a model can fix a latex newline error in a caption"
+providers:
+  - {id: openrouter:openai/gpt-4o, config: { max_tokens: 8192 }}
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if a model can fix a latex newline error in a caption"
+    vars:
+      prompt: |-
+        In latex when I force a newline in a caption with \\  it gives an error saying \Hy@tempa has an extra } runaway argument?
+    assert:
+      - type: python
+        value: "file://latex_protect.py:get_score"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

@@ -1,0 +1,20 @@
+description: "Test if the model can generate an HTML file using flexbox"
+providers:
+- {id: openrouter:openai/o3-mini-high, config: { max_tokens: 8192 }}
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if the model can generate an HTML file using flexbox"
+    vars:
+      prompt: |-
+        Generate an HTML file that uses flexbox to create a webpage with a header 200px at the top (colored red), and the rest of the body split 100px for a left sidebar (in blue), 100px for a right sidebar (in green), and the rest of the page in the middle (in white).
+    assert:
+      - type: python
+        value: "file://flexbox_webpage.py:get_assertion"
+
+writeLatestResults: true
+commandLineOptions:
+  cache: true

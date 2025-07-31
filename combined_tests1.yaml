@@ -1,0 +1,3172 @@
+description: Combined evaluation of various coding and knowledge capabilities
+providers:
+    - {id: openrouter:openai/o3-mini-high, config: { max_tokens: 8192} }
+    - {id: openrouter:openai/o4-mini-high, config: { max_tokens: 8192} }
+    - openrouter:openai/gpt-4.1
+    - openrouter:openai/gpt-4.1-mini
+    - openrouter:openai/gpt-4.1-nano
+    - openrouter:openai/gpt-4o
+    
+    
+defaultTest:
+  assert: []
+  vars: {}
+tests:
+- description: Test if the model can identify the error in an AWS Lambda code for
+    authorizing a new network. This type of error is generally difficult to find via
+    search.
+  vars:
+    prompt: 'This is a code for AWS Lambda to authorize a new network, what is wrong
+      with this:
+
+      security_group.authorize_egress(
+
+      IpPermissions=[
+
+      {''IpProtocol'': ''-1'',
+
+      ''IpRanges'': [{''CidrIpv6'': ''::/0''}]}
+
+      ]
+
+      )'
+  assert:
+  - type: python
+    value: file://aws_ipv6.py:assert_aws_security_issue
+- description: Test if the model can identify a missing ingredient in a recipe. Identifying
+    incorrect steps is much harder than missing steps.
+  vars:
+    prompt: I'm making pancakes for breakfast. I added a cup of flour, a teaspoon
+      of salt, and a few tablespoons of sugar to a bowl. I stirred it together, then
+      added a cup of milk, a beaten egg, and a few tablespoons of oil, and stirred
+      until just mixed. Then I put 1/4 a cup on a hot frying pan, and flipped it when
+      brown. But they're terrible! Why? List the main reason.
+  assert:
+  - type: python
+    value: file://baking_help.py:get_assertion
+- description: Test if a model will follow instructions to the letter without lots
+    of cajoling. Thinking in base64 is also interesting.
+  vars:
+    prompt: 'Read this base64 string, think about the answer, and type just the answer
+      in base64. You''re entire answer must be base64.
+
+
+      V2hhdCBpcyBvbmUgeWVhciBhZnRlciB3aGVuIFByZXNpZGVudCBnZW9yZ2Ugd2FzaGluZ3RvbiBib3JuPw=='
+  assert:
+  - type: python
+    value: file://base64_qanda.py:assert_base64_thought
+- description: Test if a model can run an incremental update of a bash command without
+    overwriting files that already exist
+  vars:
+    prompt: "Run find . -name *.pdf -exec python3 process.py {} txt/{}.txt   but don\t\
+      \ rewrite files that already exist. Instead of .pdf.txt make it just .txt"
+  assert:
+  - type: python
+    value: file://bash_convert_not_overwrite.py:test_bash_incremental_update
+- description: Test if a model can implement (the negation of) a simple bash 1-liner
+    searching for files that don't contain some text.
+  vars:
+    prompt: In bash list all files in cwd that don't contain asdf in the contents
+      (case-ignore)
+  assert:
+  - type: python
+    value: file://bash_find_dont_contain.py:check_assertion
+- description: Test if the model can provide the correct bash command to list files
+    in a directory and sort them by the least significant digit of their size.
+  vars:
+    prompt: In bash how do I list all files in foo/ but sort the files by the least
+      significant digit of their size so 2820 comes first and then 281771 and finally
+      2279. I want just the file names e.g., file1 otherfile lastfile.
+  assert:
+  - type: python
+    value: file://bash_list_files_by_size_mod_ten.py:assert_bash_list_size
+- description: Test if the model can write a bash script that renames files with a
+    specific pattern.
+  vars:
+    prompt: Write a bash script to rename all files of the form "merged_*" to "finished_*".
+      I want to call it by running bash rename.sh /path/to/files.
+  assert:
+  - type: python
+    value: file://bash_renamer.py:assert_bash_rename_script
+- description: Test if a model can solve a simple capture-the-flag like entry in C.
+  vars:
+    prompt: "\"Give me sequence of the inputs that can make the code output the value\
+      \ of the flag. Here is the code: \\n {#include <stdio.h>\n#include <stdlib.h>\n\
+      #include <string.h>\n\n#define MAX_INPUTS 10\n#define DATA_LENGTH 100\n#define\
+      \ ENTRY_LENGTH 5\n#define COMMAND_LENGTH 4\n\nstatic const char* flag = \"SECRET\"\
+      ;\nstatic char data[MAX_INPUTS][DATA_LENGTH];\nstatic int input_lengths[MAX_INPUTS];\n\
+      static int inputs = 0;\n\nvoid data_write() {\n    char input[DATA_LENGTH],\
+      \ len[ENTRY_LENGTH];\n    long length;\n\n    printf(\"Enter data for storage:\\\
+      n\"); // Updated message\n    fgets(input, DATA_LENGTH, stdin);\n    input[strcspn(input,\
+      \ \"\\n\")] = 0;\n\n    do {\n        printf(\"Input the data size:\\n\"); //\
+      \ Updated message\n        fgets(len, ENTRY_LENGTH, stdin);\n        length\
+      \ = strtol(len, NULL, 10);\n        if (!length) puts(\"Invalid data length,\
+      \ try again.\"); // Updated message\n    } while (!length);\n\n    if (inputs\
+      \ >= MAX_INPUTS) inputs = 0;\n    strcpy(data[inputs], input);\n    input_lengths[inputs++]\
+      \ = length;\n    printf(\"Data stored at position: %d\\n\", inputs); // Updated\
+      \ message\n}\n\nvoid data_read() {\n    char entry[ENTRY_LENGTH], output[DATA_LENGTH]\
+      \ = {'\\0'};\n    printf(\"Which data position to read?\\n\"); // Updated message\n\
+      \    fgets(entry, ENTRY_LENGTH, stdin);\n    entry[strcspn(entry, \"\\n\")]\
+      \ = 0;\n\n    long entry_number = strtol(entry, NULL, 10);\n    if (!entry_number)\
+      \ {\n        puts(flag);\n        fseek(stdin, 0, SEEK_END);\n        exit(0);\n\
+      \    }\n\n    strncpy(output, data[--entry_number], input_lengths[entry_number]);\n\
+      \    puts(output);\n}\n\nint main() {\n    char input[COMMAND_LENGTH];\n   \
+      \ long command;\n    puts(\"Welcome to the Data Echo System!\"); // Updated\
+      \ message\n\n    while (1) {\n        printf(\"Choose option (1-Write, 2-Read,\
+      \ 3-Exit):\\n\"); // Updated message\n        fgets(input, COMMAND_LENGTH, stdin);\n\
+      \        input[strcspn(input, \"\\n\")] = 0;\n\n        command = strtol(input,\
+      \ NULL, 10);\n        if (!command) {\n            puts(\"Invalid command, enter\
+      \ 1, 2 or 3.\"); // Updated message\n        } else if (command == 1) {\n  \
+      \          data_write();\n            puts(\"Data written. Perform another action?\"\
+      ); // Updated message\n        } else if (command == 2) {\n            if (!inputs)\
+      \ {\n                puts(\"Database is empty.\"); // Updated message\n    \
+      \            continue;\n            }\n            data_read();\n          \
+      \  puts(\"Data read. Perform another action?\"); // Updated message\n      \
+      \  } else if (command == 3) {\n            puts(\"Exiting. Thank you!\"); //\
+      \ Updated message\n            break;\n        } else {\n            puts(\"\
+      Please enter a valid command: 1, 2, or 3.\"); // Updated message\n        }\n\
+      \    }\n    return 0;\n}}\""
+  assert:
+  - type: python
+    value: file://basic_code_understanding.py:assert_code_understanding
+- description: Test if the model can understand a DP algorithm and then convert it
+    into an iterative implementation.
+  vars:
+    prompt: "Explain what this code does. Then, convert this recursive function to\
+      \ an iterative one, making explicit the cubic work that's being done. The functions\
+      \ should return exactly the same output but the iterative one should be faster.\
+      \ Call your function `solve_iterative` and match the type signature of the original\
+      \ function and return the code in ```python literals, donot include hypen in response and  Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..\n\n{@lru_cache(maxsize=None)\ndef solve_dp(graph, lines_left, distance_since_last):\n\
+      \    if len(graph) < lines_left: return 1e9, []\n    if lines_left == 0 and\
+      \ len(graph) == 0: return 0, []\n\n    # option 1: don't take the line\n   \
+      \ value = (1e9, [])\n    if distance_since_last < 10:\n        value = min(value,\
+      \ solve_dp(graph[1:], lines_left, distance_since_last+1))\n\n    # option 2:\
+      \ take the line\n    if lines_left > 0:\n        sub, how = solve_dp(graph[1:],\
+      \ lines_left-1, 0)\n        sub += graph[0] + (distance_since_last-8)**2\n \
+      \       value = min(value, (sub, how + [len(graph)]))\n\n    return value}"
+  assert:
+  - type: python
+    value: file://convert_dp_to_iterative.py:get_assertion
+- description: Test if the model can rewrite a given Python program into an equivalent
+    C program.
+  vars:
+    prompt: "Here's a python program. Please rewrite it in c with the type signature\
+      \ float solve_dp(float* arr, int size, int lines_left)\n\ndef solve_dp(graph,\
+      \ lines_left):\n    n = len(graph)\n\n    dp = [[[1e9 for _ in range(10)] for\
+      \ _ in range(lines_left + 1)] for _ in range(n + 1)]\n    # Initialize how as\
+      \ -1 indicating no decision made\n    how = [[[-1 for _ in range(10)] for _\
+      \ in range(lines_left + 1)] for _ in range(n + 1)]\n\n    for i in range(n,\
+      \ -1, -1):\n        for j in range(lines_left + 1):\n            for k in range(10):\n\
+      \                if i == n and j == 0:\n                    dp[i][j][k] = 0\n\
+      \                else:\n                    # Option 1: don't take the line\n\
+      \                    if i < n and k < 9:\n                        if dp[i +\
+      \ 1][j][k + 1] < dp[i][j][k]:\n                            dp[i][j][k] = dp[i\
+      \ + 1][j][k + 1]\n                            how[i][j][k] = k + 1  # Representing\
+      \ choosing not to take the line\n\n                    # Option 2: take the\
+      \ line\n                    if i < n and j > 0:\n                        cost\
+      \ = graph[i] + (k - 8)**2\n                        if cost + dp[i + 1][j - 1][0]\
+      \ < dp[i][j][k]:\n                            dp[i][j][k] = cost + dp[i + 1][j\
+      \ - 1][0]\n                            how[i][j][k] = 0  # Representing choosing\
+      \ to take the line\n\n    # Reconstruct the solution\n\n    i, j, k = 0, lines_left,\
+      \ 6\n    taken_lines = []\n    while i < n:\n        if how[i][j][k] == 0: \
+      \ # Chose to take the line\n            taken_lines.append(n - i)\n        \
+      \    i += 1\n            j -= 1\n            k = 0\n        else:  # Chose not\
+      \ to take the line\n            i += 1\n            k += 1\n\n    return dp[0][lines_left][6]"
+    assert:
+    - type: python
+      value: file://convert_to_c.py:assert_c_rewrite
+- description: Test if the model can rewrite a very simple Python program into an
+    equivalent C program.
+  vars:
+    prompt: "Here's a python program. Please rewrite it in c with the type signature\
+      \ float my_sqrt(float, float) and return the code in ```c  ``` literals and Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..\n\ndef my_sqrt(number, precision=0.0001):\n \
+      \   guess = number / 2  # Start with an initial guess\n    \n    while abs(guess\
+      \ * guess - number) >= precision:\n        guess = (guess + number / guess)\
+      \ / 2  # Improve the guess using the Babylonian method\n    \n    return guess"
+  assert:
+  - type: python
+    value: file://convert_to_c_simple.py:assert_c_rewrite
+- description: Test if the model can rewrite a given python in C that performs reduced
+    row echelon form (rref) on a 2D matrix.
+  vars:
+    prompt: "Rewrite this function in C. You can assume that the input is a 2d matrix\
+      \ correctly formatted. Call it rref(int** matrix, int rows, int cols, int graphlen)\
+      \ where the size is matrix[rows][cols]. Return an int** of used_for_row.\n\n\
+      def rref(matrix, graphlen):\n    PH = 16\n\n    extra = 0\n    col = 0\n   \
+      \ pivots = []\n\n    used_for_row = [set([i]) for i in range(matrix.shape[0])]\n\
+      \    \n    matrix = matrix%PH\n    while col+extra < matrix.shape[1]-1 and col\
+      \ < matrix.shape[0]:\n\n        if matrix[col,col+extra] == 0:\n           \
+      \ if np.all(matrix[:,col] == 0):\n                extra += 1\n             \
+      \   continue\n            other = np.argwhere(matrix[:,col+extra] != 0).flatten()[-1]\n\
+      \            if other < col:\n                extra += 1\n                continue\n\
+      \n            matrix[col], matrix[other] = list(matrix[other]), list(matrix[col])\n\
+      \            used_for_row[col], used_for_row[other] = used_for_row[other], used_for_row[col]\n\
+      \n        pivots.append(col+extra)\n        pivot = matrix[col,col+extra]\n\
+      \        if col+extra < graphlen:\n            assert np.abs(pivot) == 1 or\
+      \ np.abs(pivot) == PH-1\n        else:\n            assert np.abs(pivot) ==\
+      \ 2 or np.abs(pivot) == PH-2\n            pivot //= 2\n        matrix[col] *=\
+      \ pivot\n        matrix[col] %= PH\n\n        others = np.argwhere(matrix[:,col+extra]).flatten()\n\
+      \n        for i in others:\n            if i == col: continue\n            used_for_row[i]\
+      \ |= used_for_row[col]\n            if col < graphlen:\n                matrix[i]\
+      \ -= matrix[col]*matrix[i,col+extra]\n            else:\n                while\
+      \ matrix[i,col+extra] != 0:\n                    matrix[i] = (matrix[i]-matrix[col])%PH\n\
+      \            matrix[i] %= PH\n                \n        col += 1\n    \n   \
+      \ matrix = np.array(matrix)%PH\n    return [sorted(x) for x in used_for_row]"
+    assert:
+    - type: python
+      value: file://c_rref.py:check
+- description: This test case is meant to test if the model can correctly evaluate
+    a complex C expression.
+  vars:
+    prompt: What does the c expression `-~++*x--` evaluate to in simplest form? Ignore
+      side effects. Write 'Final answer:' and then give your answer.
+  assert:
+  - type: python
+    value: file://c_weird_expression.py:assert_correct_c_expression
+- description: Test if the model can extract structured data from (somewhat) unstructured
+    text.
+  vars:
+    prompt: "From the following data extract the best performing defense each year,\
+      \ in the format {year: robust accuracy}\n\nSo for example the answer for {\"\
+      2024\": 69.71, \"2023\": ..., ...}, now fill it in for every other year. Return\
+      \ the answer as a JSON dict and json must be in ```json ``` literals.\n\nRank\tMethod\tStandard\naccuracy\tAutoAttack\n\
+      robust\naccuracy\tBest known\nrobust\naccuracy\tAA eval.\npotentially\nunreliable\t\
+      Extra\ndata\tArchitecture\tVenue\n1\tRobust Principles: Architectural Design\
+      \ Principles for Adversarially Robust CNNs\nIt uses additional 50M synthetic\
+      \ images in training.\t93.27%\t71.07%\t71.07%\t\n×\n×\tRaWideResNet-70-16\t\
+      BMVC 2023\n2\tBetter Diffusion Models Further Improve Adversarial Training\n\
+      It uses additional 50M synthetic images in training.\t93.25%\t70.69%\t70.69%\t\
+      \n×\n×\tWideResNet-70-16\tICML 2023\n3\tMixedNUTS: Training-Free Accuracy-Robustness\
+      \ Balance via Nonlinearly Mixed Classifiers\nIt uses an ensemble of networks.\
+      \ The robust base classifier uses 50M synthetic images. 69.71% robust accuracy\
+      \ is due to the original evaluation (Adaptive AutoAttack)\t95.19%\t70.08%\t\
+      69.71%\t\n×\n☑\tResNet-152 + WideResNet-70-16\tarXiv, Feb 2024\n4\tImproving\
+      \ the Accuracy-Robustness Trade-off of Classifiers via Adaptive Smoothing\n\
+      It uses an ensemble of networks. The robust base classifier uses 50M synthetic\
+      \ images.\t95.23%\t68.06%\t68.06%\t\n×\n☑\tResNet-152 + WideResNet-70-16 + mixing\
+      \ network\tSIMODS 2024\n5\tDecoupled Kullback-Leibler Divergence Loss\nIt uses\
+      \ additional 20M synthetic images in training.\t92.16%\t67.73%\t67.73%\t\n×\n\
+      ×\tWideResNet-28-10\tarXiv, May 2023\n6\tBetter Diffusion Models Further Improve\
+      \ Adversarial Training\nIt uses additional 20M synthetic images in training.\t\
+      92.44%\t67.31%\t67.31%\t\n×\n×\tWideResNet-28-10\tICML 2023\n7\tFixing Data\
+      \ Augmentation to Improve Adversarial Robustness\n66.56% robust accuracy is\
+      \ due to the original evaluation (AutoAttack + MultiTargeted)\t92.23%\t66.58%\t\
+      66.56%\t\n×\n☑\tWideResNet-70-16\tarXiv, Mar 2021\n8\tImproving Robustness using\
+      \ Generated Data\nIt uses additional 100M synthetic images in training. 66.10%\
+      \ robust accuracy is due to the original evaluation (AutoAttack + MultiTargeted)\t\
+      88.74%\t66.11%\t66.10%\t\n×\n×\tWideResNet-70-16\tNeurIPS 2021\n9\tUncovering\
+      \ the Limits of Adversarial Training against Norm-Bounded Adversarial Examples\n\
+      65.87% robust accuracy is due to the original evaluation (AutoAttack + MultiTargeted)\t\
+      91.10%\t65.88%\t65.87%\t\n×\n☑\tWideResNet-70-16\tarXiv, Oct 2020\n10\tRevisiting\
+      \ Residual Networks for Adversarial Robustness: An Architectural Perspective\t\
+      91.58%\t65.79%\t65.79%\t\n×\n☑\tWideResNet-A4\tarXiv, Dec. 2022\n11\tFixing\
+      \ Data Augmentation to Improve Adversarial Robustness\nIt uses additional 1M\
+      \ synthetic images in training. 64.58% robust accuracy is due to the original\
+      \ evaluation (AutoAttack + MultiTargeted)\t88.50%\t64.64%\t64.58%\t\n×\n×\t\
+      WideResNet-106-16\tarXiv, Mar 2021\n12\tStable Neural ODE with Lyapunov-Stable\
+      \ Equilibrium Points for Defending Against Adversarial Attacks\nBased on the\
+      \ model Rebuffi2021Fixing_70_16_cutmix_extra. 64.20% robust accuracy is due\
+      \ to AutoAttack + transfer APGD from Rebuffi2021Fixing_70_16_cutmix_extra\t\
+      93.73%\t71.28%\t64.20%\t\n☑\n☑\tWideResNet-70-16, Neural ODE block\tNeurIPS\
+      \ 2021\n13\tFixing Data Augmentation to Improve Adversarial Robustness\nIt uses\
+      \ additional 1M synthetic images in training. 64.20% robust accuracy is due\
+      \ to the original evaluation (AutoAttack + MultiTargeted)\t88.54%\t64.25%\t\
+      64.20%\t\n×\n×\tWideResNet-70-16\tarXiv, Mar 2021\n14\tExploring and Exploiting\
+      \ Decision Boundary Dynamics for Adversarial Robustness\nIt uses additional\
+      \ 10M synthetic images in training.\t93.69%\t63.89%\t63.89%\t\n×\n×\tWideResNet-28-10\t\
+      ICLR 2023\n15\tImproving Robustness using Generated Data\nIt uses additional\
+      \ 100M synthetic images in training. 63.38% robust accuracy is due to the original\
+      \ evaluation (AutoAttack + MultiTargeted)\t87.50%\t63.44%\t63.38%\t\n×\n×\t\
+      WideResNet-28-10\tNeurIPS 2021\n16\tRobustness and Accuracy Could Be Reconcilable\
+      \ by (Proper) Definition\nIt uses additional 1M synthetic images in training.\t\
+      89.01%\t63.35%\t63.35%\t\n×\n×\tWideResNet-70-16\tICML 2022\n17\tHelper-based\
+      \ Adversarial Training: Reducing Excessive Margin to Achieve a Better Accuracy\
+      \ vs. Robustness Trade-off\t91.47%\t62.83%\t62.83%\t\n×\n☑\tWideResNet-34-10\t\
+      OpenReview, Jun 2021\n18\tRobust Learning Meets Generative Models: Can Proxy\
+      \ Distributions Improve Adversarial Robustness?\nIt uses additional 10M synthetic\
+      \ images in training.\t87.30%\t62.79%\t62.79%\t\n×\n×\tResNest152\tICLR 2022\n\
+      19\tUncovering the Limits of Adversarial Training against Norm-Bounded Adversarial\
+      \ Examples\n62.76% robust accuracy is due to the original evaluation (AutoAttack\
+      \ + MultiTargeted)\t89.48%\t62.80%\t62.76%\t\n×\n☑\tWideResNet-28-10\tarXiv,\
+      \ Oct 2020\n20\tExploring Architectural Ingredients of Adversarially Robust\
+      \ Deep Neural Networks\nUses exponential moving average (EMA)\t91.23%\t62.54%\t\
+      62.54%\t\n×\n☑\tWideResNet-34-R\tNeurIPS 2021\n21\tExploring Architectural Ingredients\
+      \ of Adversarially Robust Deep Neural Networks\t90.56%\t61.56%\t61.56%\t\n×\n\
+      ☑\tWideResNet-34-R\tNeurIPS 2021\n22\tParameterizing Activation Functions for\
+      \ Adversarial Robustness\nIt uses additional ~6M synthetic images in training.\t\
+      87.02%\t61.55%\t61.55%\t\n×\n×\tWideResNet-28-10-PSSiLU\tarXiv, Oct 2021\n23\t\
+      Robustness and Accuracy Could Be Reconcilable by (Proper) Definition\nIt uses\
+      \ additional 1M synthetic images in training.\t88.61%\t61.04%\t61.04%\t\n×\n\
+      ×\tWideResNet-28-10\tICML 2022\n24\tHelper-based Adversarial Training: Reducing\
+      \ Excessive Margin to Achieve a Better Accuracy vs. Robustness Trade-off\nIt\
+      \ uses additional 1M synthetic images in training.\t88.16%\t60.97%\t60.97%\t\
+      \n×\n×\tWideResNet-28-10\tOpenReview, Jun 2021\n25\tFixing Data Augmentation\
+      \ to Improve Adversarial Robustness\nIt uses additional 1M synthetic images\
+      \ in training. 60.73% robust accuracy is due to the original evaluation (AutoAttack\
+      \ + MultiTargeted)\t87.33%\t60.75%\t60.73%\t\n×\n×\tWideResNet-28-10\tarXiv,\
+      \ Mar 2021\n26\tDo Wider Neural Networks Really Help Adversarial Robustness?\n\
+      87.67%\t60.65%\t60.65%\tUnknown\t☑\tWideResNet-34-15\tarXiv, Oct 2020\n27\t\
+      Improving Neural Network Robustness via Persistency of Excitation\t86.53%\t\
+      60.41%\t60.41%\t\n×\n☑\tWideResNet-34-15\tACC 2022\n28\tRobust Learning Meets\
+      \ Generative Models: Can Proxy Distributions Improve Adversarial Robustness?\n\
+      It uses additional 10M synthetic images in training.\t86.68%\t60.27%\t60.27%\t\
+      \n×\n×\tWideResNet-34-10\tICLR 2022\n29\tAdversarial Weight Perturbation Helps\
+      \ Robust Generalization\t88.25%\t60.04%\t60.04%\t\n×\n☑\tWideResNet-28-10\t\
+      NeurIPS 2020\n30\tImproving Neural Network Robustness via Persistency of Excitation\t\
+      89.46%\t59.66%\t59.66%\t\n×\n☑\tWideResNet-28-10\tACC 2022\n31\tGeometry-aware\
+      \ Instance-reweighted Adversarial Training\nUses \nℓ\n∞\n = 0.031 ≈ 7.9/255\
+      \ instead of 8/255.\t89.36%\t59.64%\t59.64%\t\n×\n☑\tWideResNet-28-10\tICLR\
+      \ 2021\n32\tUnlabeled Data Improves Adversarial Robustness\t89.69%\t59.53%\t\
+      59.53%\t\n×\n☑\tWideResNet-28-10\tNeurIPS 2019\n33\tImproving Robustness using\
+      \ Generated Data\nIt uses additional 100M synthetic images in training. 58.50%\
+      \ robust accuracy is due to the original evaluation (AutoAttack + MultiTargeted)\t\
+      87.35%\t58.63%\t58.50%\t\n×\n×\tPreActResNet-18\tNeurIPS 2021\n34\tData filtering\
+      \ for efficient adversarial training\n86.10%\t58.09%\t58.09%\t\n×\n×\tWideResNet-34-20\t\
+      Pattern Recognition 2024\n35\tScaling Adversarial Training to Large Perturbation\
+      \ Bounds\t85.32%\t58.04%\t58.04%\t\n×\n×\tWideResNet-34-10\tECCV 2022\n36\t\
+      Efficient and Effective Augmentation Strategy for Adversarial Training\t88.71%\t\
+      57.81%\t57.81%\t\n×\n×\tWideResNet-34-10\tNeurIPS 2022\n37\tLTD: Low Temperature\
+      \ Distillation for Robust Adversarial Training\n86.03%\t57.71%\t57.71%\t\n×\n\
+      ×\tWideResNet-34-20\tarXiv, Nov 2021\n38\tHelper-based Adversarial Training:\
+      \ Reducing Excessive Margin to Achieve a Better Accuracy vs. Robustness Trade-off\t\
+      89.02%\t57.67%\t57.67%\t\n×\n☑\tPreActResNet-18\tOpenReview, Jun 2021\n39\t\
+      LAS-AT: Adversarial Training with Learnable Attack Strategy\n85.66%\t57.61%\t\
+      57.61%\t\n×\n×\tWideResNet-70-16\tarXiv, Mar 2022\n40\tA Light Recipe to Train\
+      \ Robust Vision Transformers\t91.73%\t57.58%\t57.58%\t\n×\n☑\tXCiT-L12\tarXiv,\
+      \ Sep 2022\n41\tData filtering for efficient adversarial training\n86.54%\t\
+      57.30%\t57.30%\t\n×\n×\tWideResNet-34-10\tPattern Recognition 2024\n42\tA Light\
+      \ Recipe to Train Robust Vision Transformers\t91.30%\t57.27%\t57.27%\t\n×\n\
+      ☑\tXCiT-M12\tarXiv, Sep 2022\n43\tUncovering the Limits of Adversarial Training\
+      \ against Norm-Bounded Adversarial Examples\n57.14% robust accuracy is due to\
+      \ the original evaluation (AutoAttack + MultiTargeted)\t85.29%\t57.20%\t57.14%\t\
+      \n×\n×\tWideResNet-70-16\tarXiv, Oct 2020\n44\tHYDRA: Pruning Adversarially\
+      \ Robust Neural Networks\nCompressed model\t88.98%\t57.14%\t57.14%\t\n×\n☑\t\
+      WideResNet-28-10\tNeurIPS 2020\n45\tDecoupled Kullback-Leibler Divergence Loss\t\
+      85.31%\t57.09%\t57.09%\t\n×\n×\tWideResNet-34-10\tarXiv, May 2023\n46\tHelper-based\
+      \ Adversarial Training: Reducing Excessive Margin to Achieve a Better Accuracy\
+      \ vs. Robustness Trade-off\nIt uses additional 1M synthetic images in training.\t\
+      86.86%\t57.09%\t57.09%\t\n×\n×\tPreActResNet-18\tOpenReview, Jun 2021\n47\t\
+      LTD: Low Temperature Distillation for Robust Adversarial Training\n85.21%\t\
+      56.94%\t56.94%\t\n×\n×\tWideResNet-34-10\tarXiv, Nov 2021\n48\tUncovering the\
+      \ Limits of Adversarial Training against Norm-Bounded Adversarial Examples\n\
+      56.82% robust accuracy is due to the original evaluation (AutoAttack + MultiTargeted)\t\
+      85.64%\t56.86%\t56.82%\t\n×\n×\tWideResNet-34-20\tarXiv, Oct 2020\n49\tFixing\
+      \ Data Augmentation to Improve Adversarial Robustness\nIt uses additional 1M\
+      \ synthetic images in training.\t83.53%\t56.66%\t56.66%\t\n×\n×\tPreActResNet-18\t\
+      arXiv, Mar 2021\n50\tImproving Adversarial Robustness Requires Revisiting Misclassified\
+      \ Examples\t87.50%\t56.29%\t56.29%\t\n×\n☑\tWideResNet-28-10\tICLR 2020\n51\t\
+      LAS-AT: Adversarial Training with Learnable Attack Strategy\n84.98%\t56.26%\t\
+      56.26%\t\n×\n×\tWideResNet-34-10\tarXiv, Mar 2022\n52\tAdversarial Weight Perturbation\
+      \ Helps Robust Generalization\t85.36%\t56.17%\t56.17%\t\n×\n×\tWideResNet-34-10\t\
+      NeurIPS 2020\n53\tA Light Recipe to Train Robust Vision Transformers\t90.06%\t\
+      56.14%\t56.14%\t\n×\n☑\tXCiT-S12\tarXiv, Sep 2022\n54\tAre Labels Required for\
+      \ Improving Adversarial Robustness?\t86.46%\t56.03%\t56.03%\tUnknown\t☑\tWideResNet-28-10\t\
+      NeurIPS 2019\n55\tRobust Learning Meets Generative Models: Can Proxy Distributions\
+      \ Improve Adversarial Robustness?\nIt uses additional 10M synthetic images in\
+      \ training.\t84.59%\t55.54%\t55.54%\t\n×\n×\tResNet-18\tICLR 2022\n56\tUsing\
+      \ Pre-Training Can Improve Model Robustness and Uncertainty\t87.11%\t54.92%\t\
+      54.92%\t\n×\n☑\tWideResNet-28-10\tICML 2019\n57\tBag of Tricks for Adversarial\
+      \ Training\n86.43%\t54.39%\t54.39%\tUnknown\t×\tWideResNet-34-20\tICLR 2021\n\
+      58\tBoosting Adversarial Training with Hypersphere Embedding\t85.14%\t53.74%\t\
+      53.74%\t\n×\n×\tWideResNet-34-20\tNeurIPS 2020\n59\tLearnable Boundary Guided\
+      \ Adversarial Training\nUses \nℓ\n∞\n = 0.031 ≈ 7.9/255 instead of 8/255\t88.70%\t\
+      53.57%\t53.57%\t\n×\n×\tWideResNet-34-20\tICCV 2021\n60\tAttacks Which Do Not\
+      \ Kill Training Make Adversarial Learning Stronger\t84.52%\t53.51%\t53.51%\t\
+      \n×\n×\tWideResNet-34-10\tICML 2020\n61\tOverfitting in adversarially robust\
+      \ deep learning\t85.34%\t53.42%\t53.42%\t\n×\n×\tWideResNet-34-20\tICML 2020\n\
+      62\tSelf-Adaptive Training: beyond Empirical Risk Minimization\nUses \nℓ\n∞\n\
+      \ = 0.031 ≈ 7.9/255 instead of 8/255.\t83.48%\t53.34%\t53.34%\tUnknown\t×\t\
+      WideResNet-34-10\tNeurIPS 2020\n63\tTheoretically Principled Trade-off between\
+      \ Robustness and Accuracy\nUses \nℓ\n∞\n = 0.031 ≈ 7.9/255 instead of 8/255.\t\
+      84.92%\t53.08%\t53.08%\tUnknown\t×\tWideResNet-34-10\tICML 2019\n64\tLearnable\
+      \ Boundary Guided Adversarial Training\nUses \nℓ\n∞\n = 0.031 ≈ 7.9/255 instead\
+      \ of 8/255\t88.22%\t52.86%\t52.86%\t\n×\n×\tWideResNet-34-10\tICCV 2021\n65\t\
+      Adversarial Robustness through Local Linearization\t86.28%\t52.84%\t52.84%\t\
+      Unknown\t×\tWideResNet-40-8\tNeurIPS 2019\n66\tEfficient and Effective Augmentation\
+      \ Strategy for Adversarial Training\t85.71%\t52.48%\t52.48%\t\n×\n×\tResNet-18\t\
+      NeurIPS 2022\n67\tAdversarial Robustness: From Self-Supervised Pre-Training\
+      \ to Fine-Tuning\nUses ensembles of 3 models.\t86.04%\t51.56%\t51.56%\tUnknown\t\
+      ×\tResNet-50\tCVPR 2020\n68\tEfficient Robust Training via Backward Smoothing\n\
+      85.32%\t51.12%\t51.12%\tUnknown\t×\tWideResNet-34-10\tarXiv, Oct 2020\n69\t\
+      Scaling Adversarial Training to Large Perturbation Bounds\t80.24%\t51.06%\t\
+      51.06%\t\n×\n×\tResNet-18\tECCV 2022\n70\tImproving Adversarial Robustness Through\
+      \ Progressive Hardening\n86.84%\t50.72%\t50.72%\tUnknown\t×\tWideResNet-34-10\t\
+      arXiv, Mar 2020\n71\tRobustness library\t87.03%\t49.25%\t49.25%\tUnknown\t×\t\
+      ResNet-50\tGitHub,\nOct 2019\n72\tHarnessing the Vulnerability of Latent Layers\
+      \ in Adversarially Trained Models\t87.80%\t49.12%\t49.12%\tUnknown\t×\tWideResNet-34-10\t\
+      IJCAI 2019\n73\tMetric Learning for Adversarial Robustness\t86.21%\t47.41%\t\
+      47.41%\tUnknown\t×\tWideResNet-34-10\tNeurIPS 2019\n74\tYou Only Propagate Once:\
+      \ Accelerating Adversarial Training via Maximal Principle\nFocuses on fast adversarial\
+      \ training.\t87.20%\t44.83%\t44.83%\tUnknown\t×\tWideResNet-34-10\tNeurIPS 2019\n\
+      75\tTowards Deep Learning Models Resistant to Adversarial Attacks\t87.14%\t\
+      44.04%\t44.04%\tUnknown\t×\tWideResNet-34-10\tICLR 2018\n76\tUnderstanding and\
+      \ Improving Fast Adversarial Training\nFocuses on fast adversarial training.\t\
+      79.84%\t43.93%\t43.93%\tUnknown\t×\tPreActResNet-18\tNeurIPS 2020\n77\tRethinking\
+      \ Softmax Cross-Entropy Loss for Adversarial Robustness\t80.89%\t43.48%\t43.48%\t\
+      Unknown\t×\tResNet-32\tICLR 2020\n78\tFast is better than free: Revisiting adversarial\
+      \ training\nFocuses on fast adversarial training.\t83.34%\t43.21%\t43.21%\t\
+      Unknown\t×\tPreActResNet-18\tICLR 2020\n79\tAdversarial Training for Free!\t\
+      86.11%\t41.47%\t41.47%\tUnknown\t×\tWideResNet-34-10\tNeurIPS 2019\n80\tMMA\
+      \ Training: Direct Input Space Margin Maximization through Adversarial Training\t\
+      84.36%\t41.44%\t41.44%\tUnknown\t×\tWideResNet-28-4\tICLR 2020\n81\tA Tunable\
+      \ Robust Pruning Framework Through Dynamic Network Rewiring of DNNs\nCompressed\
+      \ model\t87.32%\t40.41%\t40.41%\t\n×\n×\tResNet-18\tASP-DAC 2021\n82\tControlling\
+      \ Neural Level Sets\nUses \nℓ\n∞\n = 0.031 ≈ 7.9/255 instead of 8/255.\t81.30%\t\
+      40.22%\t40.22%\tUnknown\t×\tResNet-18\tNeurIPS 2019\n83\tRobustness via Curvature\
+      \ Regularization, and Vice Versa\t83.11%\t38.50%\t38.50%\tUnknown\t×\tResNet-18\t\
+      CVPR 2019\n84\tDefense Against Adversarial Attacks Using Feature Scattering-based\
+      \ Adversarial Training\t89.98%\t36.64%\t36.64%\tUnknown\t×\tWideResNet-28-10\t\
+      NeurIPS 2019\n85\tAdversarial Interpolation Training: A Simple Approach for\
+      \ Improving Model Robustness\t90.25%\t36.45%\t36.45%\tUnknown\t×\tWideResNet-28-10\t\
+      OpenReview, Sep 2019\n86\tAdversarial Defense via Learning to Generate Diverse\
+      \ Attacks\t78.91%\t34.95%\t34.95%\tUnknown\t×\tResNet-20\tICCV 2019\n87\tSensible\
+      \ adversarial learning\t91.51%\t34.22%\t34.22%\tUnknown\t×\tWideResNet-34-10\t\
+      OpenReview, Sep 2019\n88\tTowards Stable and Efficient Training of Verifiably\
+      \ Robust Neural Networks\nVerifiably robust model with 32.24% provable robust\
+      \ accuracy\t44.73%\t32.64%\t32.64%\tUnknown\t×\t5-layer-CNN\tICLR 2020\n89\t\
+      Bilateral Adversarial Training: Towards Fast Training of More Robust Models\
+      \ Against Adversarial Attacks\t92.80%\t29.35%\t29.35%\tUnknown\t×\tWideResNet-28-10\t\
+      ICCV 2019\n90\tEnhancing Adversarial Defense by k-Winners-Take-All\nUses \n\
+      ℓ\n∞\n = 0.031 ≈ 7.9/255 instead of 8/255.\n7.40% robust accuracy is due to\
+      \ 1 restart of APGD-CE and 30 restarts of Square Attack\nNote: this adaptive\
+      \ evaluation (Section 5) reports 0.16% robust accuracy on a different model\
+      \ (adversarially trained ResNet-18).\t79.28%\t18.50%\t7.40%\t\n☑\n×\tDenseNet-121\t\
+      ICLR 2020\n91\tManifold Regularization for Adversarial Robustness\t90.84%\t\
+      1.35%\t1.35%\tUnknown\t×\tResNet-18\tarXiv, Mar 2020\n92\tAdversarial Defense\
+      \ by Restricting the Hidden Space of Deep Neural Networks\t89.16%\t0.28%\t0.28%\t\
+      Unknown\t×\tResNet-110\tICCV 2019\n93\tJacobian Adversarially Regularized Networks\
+      \ for Robustness\t93.79%\t0.26%\t0.26%\tUnknown\t×\tWideResNet-34-10\tICLR 2020\n\
+      94\tClusTR: Clustering Training for Robustness\t91.03%\t0.00%\t0.00%\tUnknown\t\
+      ×\tWideResNet-28-10\tarXiv, Jun 2020\n95\tStandardly trained model\t94.78%\t\
+      0.0%\t0.0%\tUnknown\t×\tWideResNet-28-10\tN/A"
+  assert:
+  - type: python
+    value: file://data_extraction_byyear.py:check_json_subset
+- description: Test if the model can process a large table of text and identify rows
+    with specific values.
+  vars:
+    prompt: "Here is a table about information of states and territory.\n\nState /\
+      \ territory\tTotal (mi2) \tTotal (km2) \tLand (mi2) \tLand (km2) \tWater (mi2)\
+      \ \tWater (km2) \t%\nwater\nAlaska\t665,384\t1,723,337\t570,641\t1,477,953\t\
+      94,743\t245,383\t14.2%\nTexas\t268,596\t695,662\t261,232\t676,587\t7,365\t19,075\t\
+      2.7%\nCalifornia\t163,695\t423,967\t155,779\t403,466\t7,916\t20,501\t4.8%\n\
+      Montana\t147,040\t380,831\t145,546\t376,962\t1,494\t3,869\t1.0%\nNew Mexico\t\
+      121,590\t314,917\t121,298\t314,161\t292\t757\t0.2%\nArizona\t113,990\t295,234\t\
+      113,594\t294,207\t396\t1,026\t0.3%\nNevada\t110,572\t286,380\t109,781\t284,332\t\
+      791\t2,048\t0.7%\nColorado\t104,094\t269,601\t103,642\t268,431\t452\t1,170\t\
+      0.4%\nOregon\t98,379\t254,799\t95,988\t248,608\t2,391\t6,191\t2.4%\nWyoming\t\
+      97,813\t253,335\t97,093\t251,470\t720\t1,864\t0.7%\nMichigan\t96,714\t250,487\t\
+      56,539\t146,435\t40,175\t104,052\t41.5%\nMinnesota\t86,936\t225,163\t79,627\t\
+      206,232\t7,309\t18,930\t8.4%\nUtah\t84,897\t219,882\t82,170\t212,818\t2,727\t\
+      7,064\t3.2%\nIdaho\t83,569\t216,443\t82,643\t214,045\t926\t2,398\t1.1%\nKansas\t\
+      82,278\t213,100\t81,759\t211,754\t520\t1,346\t0.6%\nNebraska\t77,348\t200,330\t\
+      76,824\t198,974\t524\t1,356\t0.7%\nSouth Dakota\t77,116\t199,729\t75,811\t196,350\t\
+      1,305\t3,379\t1.7%\nWashington\t71,298\t184,661\t66,456\t172,119\t4,842\t12,542\t\
+      6.8%\nNorth Dakota\t70,698\t183,108\t69,001\t178,711\t1,698\t4,397\t2.4%\nOklahoma\t\
+      69,899\t181,037\t68,595\t177,660\t1,304\t3,377\t1.9%\nMissouri\t69,707\t180,540\t\
+      68,742\t178,040\t965\t2,501\t1.4%\nFlorida\t65,758\t170,312\t53,625\t138,887\t\
+      12,133\t31,424\t18.5%\nWisconsin\t65,496\t169,635\t54,158\t140,268\t11,339\t\
+      29,367\t17.3%\nGeorgia\t59,425\t153,910\t57,513\t148,959\t1,912\t4,951\t3.2%\n\
+      Illinois\t57,914\t149,995\t55,519\t143,793\t2,395\t6,202\t4.1%\nIowa\t56,273\t\
+      145,746\t55,857\t144,669\t416\t1,077\t0.7%\nNew York\t54,555\t141,297\t47,126\t\
+      122,057\t7,429\t19,240\t13.6%\nNorth Carolina\t53,819\t139,391\t48,618\t125,920\t\
+      5,201\t13,471\t9.7%\nArkansas\t53,179\t137,732\t52,035\t134,771\t1,143\t2,961\t\
+      2.1%\nAlabama\t52,420\t135,767\t50,645\t131,171\t1,775\t4,597\t3.4%\nLouisiana\t\
+      52,378\t135,659\t43,204\t111,898\t9,174\t23,761\t17.5%\nMississippi\t48,432\t\
+      125,438\t46,923\t121,531\t1,509\t3,907\t3.1%\nPennsylvania\t46,054\t119,280\t\
+      44,743\t115,883\t1,312\t3,397\t2.8%\nOhio\t44,826\t116,098\t40,861\t105,829\t\
+      3,965\t10,269\t8.8%\nVirginia\t42,775\t110,787\t39,490\t102,279\t3,285\t8,508\t\
+      7.7%\nTennessee\t42,144\t109,153\t41,235\t106,798\t909\t2,355\t2.2%\nKentucky\t\
+      40,408\t104,656\t39,486\t102,269\t921\t2,387\t2.3%\nIndiana\t36,420\t94,326\t\
+      35,826\t92,789\t593\t1,537\t1.6%\nMaine\t35,380\t91,633\t30,843\t79,883\t4,537\t\
+      11,750\t12.8%\nSouth Carolina\t32,020\t82,933\t30,061\t77,857\t1,960\t5,076\t\
+      6.1%\nWest Virginia\t24,230\t62,756\t24,038\t62,259\t192\t497\t0.8%\nMaryland\t\
+      12,406\t32,131\t9,707\t25,142\t2,699\t6,990\t21.8%\nHawaii\t10,932\t28,313\t\
+      6,423\t16,635\t4,509\t11,678\t41.2%\nMassachusetts\t10,554\t27,336\t7,800\t\
+      20,202\t2,754\t7,134\t26.1%\nVermont\t9,616\t24,906\t9,217\t23,871\t400\t1,035\t\
+      4.2%\nNew Hampshire\t9,349\t24,214\t8,953\t23,187\t397\t1,027\t4.2%\nNew Jersey\t\
+      8,723\t22,591\t7,354\t19,047\t1,368\t3,544\t15.7%\nConnecticut\t5,543\t14,357\t\
+      4,842\t12,542\t701\t1,816\t12.6%\nPuerto Rico\t5,325\t13,791\t3,424\t8,868\t\
+      1,901\t4,924\t35.7%\nDelaware\t2,489\t6,446\t1,949\t5,047\t540\t1,399\t21.7%\n\
+      Northern Mariana Islands\t1,976\t5,117\t182\t472\t1,793\t4,644\t90.7%\nRhode\
+      \ Island\t1,545\t4,001\t1,034\t2,678\t511\t1,324\t33.1%\nU.S. Virgin Islands\t\
+      733\t1,898\t134\t348\t599\t1,550\t81.7%\nAmerican Samoa\t581\t1,505\t76\t198\t\
+      505\t1,307\t86.9%\nGuam\t571\t1,478\t210\t543\t361\t935\t63.2%\nDistrict of\
+      \ Columbia\t68\t177\t61\t158\t7\t19\t10.3%\nMinor Outlying Islands[3][a]\t16\t\
+      41\t16\t41\t0\t0\t0.0%\nContiguous US\t3,120,428\t8,081,869\t2,954,843\t7,653,006\t\
+      165,589\t428,865\t5.3%\n50 States\t3,796,676\t9,833,342\t3,531,846\t9,147,436\t\
+      264,834\t685,907\t7.0%\n50 States and DC\t3,796,744\t9,833,519\t3,531,907\t\
+      9,147,594\t264,841\t685,926\t7.0%\nUnited States\t3,805,927\t9,857,306\t3,535,932\t\
+      9,158,022\t269,995\t699,284\t7.1%\n\nList for me each of the states that have\
+      \ more than 20,000 square kilometers of water, from lowest to highest. Don't\
+      \ list any other states."
+  assert:
+  - type: python
+    value: file://data_table_processing.py:assert_state_water_analysis
+- description: Test if the model can extract structured data from (somewhat) unstructured
+    text.
+  vars:
+    prompt: It's currently 6:00pm and I'm at Belmont station. I want to get to San
+      Bruno. Tell me how to get there with which train(s) to take, and what time I
+      will arrive, to arrive as soon as possible
+  assert:
+  - type: python
+    value: file://data_train_timetable.py:assert_train_schedule_response
+- description: Test if the model can predict the date a few news headlines were published.
+  vars:
+    prompt: 'What date was this the front page of HN? Format it YYYY-MM-DD.
+
+
+      1.
+
+      We Made One Gram Of Remdesivir (acsh.org)
+
+      709 points by tomstokes on [date] | 231 comments
+
+      2.
+
+      Crafting “Crafting Interpreters” (stuffwithstuff.com)
+
+      777 points by _vbdg on [date] | 75 comments
+
+      3.
+
+      Bose QC 35 Firmware 4.5.2 Noise Cancellation Investigation Report (bose.com)
+
+      640 points by robbiet480 on [date] | 323 comments
+
+      4.
+
+      Csound: A sound and music computing system (csound.com)
+
+      226 points by diaphanous on [date] | 92 comments
+
+      5.
+
+      New Jersey needs COBOL programmers for their unemployment claims system (twitter.com/manicode)
+
+      447 points by enraged_camel on [date] | 297 comments
+
+      6.
+
+      All models are wrong, but some are completely wrong (rssdss.design.blog)
+
+      305 points by magoghm on [date] | 208 comments
+
+      7.
+
+      Configs suck? Try a real programming language (beepb00p.xyz)
+
+      289 points by gyre007 on [date] | 345 comments
+
+      8.
+
+      Ilo sitelen, a handmade computer for Toki Pona (increpare.com)
+
+      204 points by tobr on [date] | 90 comments
+
+      9.
+
+      The Svelte Compiler Handbook (lihautan.com)
+
+      330 points by PKop on [date] | 136 comments
+
+      10.
+
+      Show HN: Export HN Favorites to a CSV File
+
+      240 points by gabrielsroka on [date] | 39 comments'
+  assert:
+  - type: python
+    value: file://date_news_headlines.py:assert_date_news_headlines
+- description: Test if a model knows about old computer ports when prompted ambiguously.
+  vars:
+    prompt: What port has 5 pins on the top and 4 on the bottom?
+  assert:
+  - type: python
+    value: file://db9_pinout.py:test_db9_port_knowledge
+- description: Test if a model can explain a bug in a parallelized wordcount function.
+  vars:
+    prompt: "What is the bug in this code that makes it not count right. (I want to\
+      \ print out 4 arrays un-merged. I'll do the merging later. This is intentional.)\n\
+      \n#!/usr/bin/env python3\nimport json\nimport multiprocessing\n\ndef count_words_in_chunk(start,\
+      \ end, queue):\n    '''Count how often each word appears in the given chunk\
+      \ of the file.'''\n    word_counts = {}\n    with open('/tmp/file.txt', 'r')\
+      \ as f:\n        f.seek(start)\n        text = f.read(end - start)\n       \
+      \ # Avoid cutting words in half at the beginning\n        if start != 0:\n \
+      \           text = text.split(' ', 1)[-1]\n        # Avoid cutting words in\
+      \ half at the end\n        f.seek(end)\n        remainder = f.readline()\n \
+      \       text += remainder\n        # Tokenize and count words\n        for word\
+      \ in text.split():\n            word = word.strip().lower()  # Lowercasing for\
+      \ consistent counting\n            if word:\n                word_counts[word]\
+      \ = word_counts.get(word, 0) + 1\n    # Put result to the queue\n    queue.put(word_counts)\n\
+      \ndef main():\n    # Get the size of the file\n    file_size = 0\n    with open('/tmp/file.txt',\
+      \ 'r') as f:\n        f.seek(0, 2)\n        file_size = f.tell()\n\n    # Calculate\
+      \ chunk sizes for 4 cores\n    chunk_size = file_size // 4\n    offsets = [(i\
+      \ * chunk_size, (i + 1) * chunk_size) for i in range(4)]\n    # Last chunk should\
+      \ go until the end of the file\n    offsets[-1] = (offsets[-1][0], file_size)\n\
+      \n    # Queue for inter-process communication\n    queue = multiprocessing.Queue()\n\
+      \n    # Start 4 worker processes\n    processes = []\n    for start, end in\
+      \ offsets:\n        p = multiprocessing.Process(target=count_words_in_chunk,\
+      \ args=(start, end, queue))\n        processes.append(p)\n        p.start()\n\
+      \n    # Collect results\n    for p in processes:\n        p.join()\n\n    #\
+      \ Print results as JSON objects one-per-process\n    while not queue.empty():\n\
+      \        word_count = queue.get()\n        print(json.dumps(word_count))\n\n\
+      if __name__ == \"__main__\":\n    main()\n\n\nList exactly one reason."
+  assert:
+  - type: python
+    value: file://debug_broken_code_parcount.py:check_bug_explanation
+- description: Test if a model knows that editing the innerHTML clears event listeners.
+  vars:
+    prompt: "Why doesn't the slider onchange event fire when I run this code?\n\n\
+      ```\n<body>\n\n<script>\n\nvar candidate_paper_list;\n\nclass Dropdown {\n \
+      \   constructor(parent_html, parent_node) {\n        var r = Math.random()\n\
+      \        parent_html.innerHTML += `<div class=\"autocomplete-container\" style=\"\
+      border: 1px solid #000; padding: 1em\">\n        <label for=\"search-input\"\
+      >Search Paper Titles:</label>\n        <input type=\"text\" id=\"search-input-${r}\"\
+      \ autocomplete=\"off\">\n        <div id=\"autocomplete-results\"></div>\n</div>`;\n\
+      \n    }\n\n}\n\nclass Mul {\n    constructor(parent_html, parent_node) {\n \
+      \       var div = document.createElement(\"div\");\n        div.style = \"border:\
+      \ 1px solid #000; padding: 1em\"\n        parent_html.appendChild(div);\n  \
+      \      var slider = document.createElement(\"input\");\n        slider.type\
+      \ = \"range\"\n        slider.id = \"foo\"\n        slider.min = \"0\"\n   \
+      \     slider.max = \"100\"\n        slider.step = \".1\"\n        this.slider\
+      \ = slider\n        div.appendChild(slider);\n        this.node = div;\n   \
+      \     div.appendChild(document.createElement(\"br\"));\n        parent_node.child\
+      \ = this;\n\n        slider.addEventListener(\"input\", (event) => {\n     \
+      \       console.log(event.target.value);\n        });\n\n    }\n\n    serialize()\
+      \ {\n        console.log(\"VALUE\", this.slider.value);\n        console.log(\"\
+      VALUE\", this.slider);\n        let positive_papers = ['const_mul', this.child.serialize(),\
+      \ +this.slider.value];\n        return positive_papers;\n    }\n}\n\n\ndocument.body.onload\
+      \ = function() {\n    var mul = new Mul(document.body, {})\n    root_node =\
+      \ mul;\n    var dropdown = new Dropdown(mul.node, mul);\n}\n\n</script>\n</body>\n\
+      ```\n\nTell me how to fix it."
+  assert:
+  - type: python
+    value: file://debug_innerhtml_eventlistener.py:get_assertion
+- description: Test if the model can disassemble Python bytecode and create a function
+    that returns a list of prime numbers and their negations.
+  vars:
+    prompt: 'Disassemble the following python into a function called foo  and return the code in ```python ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.:
+
+
+      5           0 BUILD_LIST               0
+
+      2 STORE_FAST               1 (primes)
+
+
+      6           4 LOAD_GLOBAL              0 (range)
+
+      6 LOAD_CONST               1 (2)
+
+      8 LOAD_FAST                0 (max_number)
+
+      10 LOAD_CONST               2 (1)
+
+      12 BINARY_ADD
+
+      14 CALL_FUNCTION            2
+
+      16 GET_ITER
+
+      >>   18 FOR_ITER                94 (to 114)
+
+      20 STORE_FAST               2 (possible_prime)
+
+
+      7          22 LOAD_CONST               3 (True)
+
+      24 STORE_FAST               3 (is_prime)
+
+
+      9          26 LOAD_GLOBAL              0 (range)
+
+      28 LOAD_CONST               1 (2)
+
+      30 LOAD_GLOBAL              1 (int)
+
+      32 LOAD_FAST                2 (possible_prime)
+
+      34 LOAD_CONST               4 (0.5)
+
+      36 BINARY_POWER
+
+      38 CALL_FUNCTION            1
+
+      40 LOAD_CONST               2 (1)
+
+      42 BINARY_ADD
+
+      44 CALL_FUNCTION            2
+
+      46 GET_ITER
+
+      >>   48 FOR_ITER                24 (to 74)
+
+      50 STORE_FAST               4 (num)
+
+
+      10          52 LOAD_FAST                2 (possible_prime)
+
+      54 LOAD_FAST                4 (num)
+
+      56 BINARY_MODULO
+
+      58 LOAD_CONST               5 (0)
+
+      60 COMPARE_OP               2 (==)
+
+      62 POP_JUMP_IF_FALSE       48
+
+
+      11          64 LOAD_CONST               6 (False)
+
+      66 STORE_FAST               3 (is_prime)
+
+
+      12          68 POP_TOP
+
+      70 JUMP_ABSOLUTE           74
+
+      72 JUMP_ABSOLUTE           48
+
+
+      13     >>   74 LOAD_FAST                3 (is_prime)
+
+      76 POP_JUMP_IF_FALSE       18
+
+
+      14          78 LOAD_FAST                1 (primes)
+
+      80 LOAD_METHOD              2 (append)
+
+      82 LOAD_FAST                2 (possible_prime)
+
+      84 CALL_METHOD              1
+
+      86 POP_TOP
+
+
+      16          88 LOAD_FAST                2 (possible_prime)
+
+      90 LOAD_CONST               1 (2)
+
+      92 BINARY_MODULO
+
+      94 LOAD_CONST               5 (0)
+
+      96 COMPARE_OP               3 (!=)
+
+      98 POP_JUMP_IF_FALSE       18
+
+
+      17         100 LOAD_FAST                1 (primes)
+
+      102 LOAD_METHOD              2 (append)
+
+      104 LOAD_FAST                2 (possible_prime)
+
+      106 UNARY_NEGATIVE
+
+      108 CALL_METHOD              1
+
+      110 POP_TOP
+
+      112 JUMP_ABSOLUTE           18
+
+
+      18     >>  114 LOAD_FAST                1 (primes)
+
+      116 RETURN_VALUE'
+  assert:
+  - type: python
+    value: file://decompile_py_mid.py:assert_disassemble_primes
+- description: Test if a model can decompile a long (300 line) python bytecode function
+    back to python.
+  vars:
+    prompt: 'Disassemble the following python into a function called foo and give it in ```python ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..:
+
+
+
+      2           0 LOAD_CONST               1 (16)
+
+      2 STORE_FAST               2 (PH)
+
+
+      4           4 LOAD_CONST               2 (0)
+
+      6 STORE_FAST               3 (extra)
+
+
+      5           8 LOAD_CONST               2 (0)
+
+      10 STORE_FAST               4 (col)
+
+
+      6          12 BUILD_LIST               0
+
+      14 STORE_FAST               5 (pivots)
+
+
+      8          16 LOAD_CONST               3 (<code object <listcomp> at 0x101093660,
+      file "/private/tmp/a.py", line 8>)
+
+      18 LOAD_CONST               4 (''rref.<locals>.<listcomp>'')
+
+      20 MAKE_FUNCTION            0
+
+      22 LOAD_GLOBAL              0 (range)
+
+      24 LOAD_FAST                0 (matrix)
+
+      26 LOAD_ATTR                1 (shape)
+
+      28 LOAD_CONST               2 (0)
+
+      30 BINARY_SUBSCR
+
+      32 CALL_FUNCTION            1
+
+      34 GET_ITER
+
+      36 CALL_FUNCTION            1
+
+      38 STORE_FAST               6 (used_for_row)
+
+
+      10          40 LOAD_FAST                0 (matrix)
+
+      42 LOAD_FAST                2 (PH)
+
+      44 BINARY_MODULO
+
+      46 STORE_FAST               0 (matrix)
+
+
+      11     >>   48 LOAD_FAST                4 (col)
+
+      50 LOAD_FAST                3 (extra)
+
+      52 BINARY_ADD
+
+      54 LOAD_FAST                0 (matrix)
+
+      56 LOAD_ATTR                1 (shape)
+
+      58 LOAD_CONST               5 (1)
+
+      60 BINARY_SUBSCR
+
+      62 LOAD_CONST               5 (1)
+
+      64 BINARY_SUBTRACT
+
+      66 COMPARE_OP               0 (<)
+
+      68 EXTENDED_ARG             2
+
+      70 POP_JUMP_IF_FALSE      628
+
+      72 LOAD_FAST                4 (col)
+
+      74 LOAD_FAST                0 (matrix)
+
+      76 LOAD_ATTR                1 (shape)
+
+      78 LOAD_CONST               2 (0)
+
+      80 BINARY_SUBSCR
+
+      82 COMPARE_OP               0 (<)
+
+      84 EXTENDED_ARG             2
+
+      86 POP_JUMP_IF_FALSE      628
+
+
+      13          88 LOAD_FAST                0 (matrix)
+
+      90 LOAD_FAST                4 (col)
+
+      92 LOAD_FAST                4 (col)
+
+      94 LOAD_FAST                3 (extra)
+
+      96 BINARY_ADD
+
+      98 BUILD_TUPLE              2
+
+      100 BINARY_SUBSCR
+
+      102 LOAD_CONST               2 (0)
+
+      104 COMPARE_OP               2 (==)
+
+      106 EXTENDED_ARG             1
+
+      108 POP_JUMP_IF_FALSE      262
+
+
+      14         110 LOAD_GLOBAL              2 (np)
+
+      112 LOAD_METHOD              3 (all)
+
+      114 LOAD_FAST                0 (matrix)
+
+      116 LOAD_CONST               0 (None)
+
+      118 LOAD_CONST               0 (None)
+
+      120 BUILD_SLICE              2
+
+      122 LOAD_FAST                4 (col)
+
+      124 BUILD_TUPLE              2
+
+      126 BINARY_SUBSCR
+
+      128 LOAD_CONST               2 (0)
+
+      130 COMPARE_OP               2 (==)
+
+      132 CALL_METHOD              1
+
+      134 POP_JUMP_IF_FALSE      146
+
+
+      15         136 LOAD_FAST                3 (extra)
+
+      138 LOAD_CONST               5 (1)
+
+      140 INPLACE_ADD
+
+      142 STORE_FAST               3 (extra)
+
+
+      16         144 JUMP_ABSOLUTE           48
+
+
+      17     >>  146 LOAD_GLOBAL              2 (np)
+
+      148 LOAD_METHOD              4 (argwhere)
+
+      150 LOAD_FAST                0 (matrix)
+
+      152 LOAD_CONST               0 (None)
+
+      154 LOAD_CONST               0 (None)
+
+      156 BUILD_SLICE              2
+
+      158 LOAD_FAST                4 (col)
+
+      160 LOAD_FAST                3 (extra)
+
+      162 BINARY_ADD
+
+      164 BUILD_TUPLE              2
+
+      166 BINARY_SUBSCR
+
+      168 LOAD_CONST               2 (0)
+
+      170 COMPARE_OP               3 (!=)
+
+      172 CALL_METHOD              1
+
+      174 LOAD_METHOD              5 (flatten)
+
+      176 CALL_METHOD              0
+
+      178 LOAD_CONST               6 (-1)
+
+      180 BINARY_SUBSCR
+
+      182 STORE_FAST               7 (other)
+
+
+      18         184 LOAD_FAST                7 (other)
+
+      186 LOAD_FAST                4 (col)
+
+      188 COMPARE_OP               0 (<)
+
+      190 POP_JUMP_IF_FALSE      202
+
+
+      19         192 LOAD_FAST                3 (extra)
+
+      194 LOAD_CONST               5 (1)
+
+      196 INPLACE_ADD
+
+      198 STORE_FAST               3 (extra)
+
+
+      20         200 JUMP_ABSOLUTE           48
+
+
+      22     >>  202 LOAD_GLOBAL              6 (list)
+
+      204 LOAD_FAST                0 (matrix)
+
+      206 LOAD_FAST                7 (other)
+
+      208 BINARY_SUBSCR
+
+      210 CALL_FUNCTION            1
+
+      212 LOAD_GLOBAL              6 (list)
+
+      214 LOAD_FAST                0 (matrix)
+
+      216 LOAD_FAST                4 (col)
+
+      218 BINARY_SUBSCR
+
+      220 CALL_FUNCTION            1
+
+      222 ROT_TWO
+
+      224 LOAD_FAST                0 (matrix)
+
+      226 LOAD_FAST                4 (col)
+
+      228 STORE_SUBSCR
+
+      230 LOAD_FAST                0 (matrix)
+
+      232 LOAD_FAST                7 (other)
+
+      234 STORE_SUBSCR
+
+
+      23         236 LOAD_FAST                6 (used_for_row)
+
+      238 LOAD_FAST                7 (other)
+
+      240 BINARY_SUBSCR
+
+      242 LOAD_FAST                6 (used_for_row)
+
+      244 LOAD_FAST                4 (col)
+
+      246 BINARY_SUBSCR
+
+      248 ROT_TWO
+
+      250 LOAD_FAST                6 (used_for_row)
+
+      252 LOAD_FAST                4 (col)
+
+      254 STORE_SUBSCR
+
+      256 LOAD_FAST                6 (used_for_row)
+
+      258 LOAD_FAST                7 (other)
+
+      260 STORE_SUBSCR
+
+
+      25     >>  262 LOAD_FAST                5 (pivots)
+
+      264 LOAD_METHOD              7 (append)
+
+      266 LOAD_FAST                4 (col)
+
+      268 LOAD_FAST                3 (extra)
+
+      270 BINARY_ADD
+
+      272 CALL_METHOD              1
+
+      274 POP_TOP
+
+
+      26         276 LOAD_FAST                0 (matrix)
+
+      278 LOAD_FAST                4 (col)
+
+      280 LOAD_FAST                4 (col)
+
+      282 LOAD_FAST                3 (extra)
+
+      284 BINARY_ADD
+
+      286 BUILD_TUPLE              2
+
+      288 BINARY_SUBSCR
+
+      290 STORE_FAST               8 (pivot)
+
+
+      27         292 LOAD_FAST                4 (col)
+
+      294 LOAD_FAST                3 (extra)
+
+      296 BINARY_ADD
+
+      298 LOAD_FAST                1 (graphlen)
+
+      300 COMPARE_OP               0 (<)
+
+      302 EXTENDED_ARG             1
+
+      304 POP_JUMP_IF_FALSE      348
+
+
+      28         306 LOAD_GLOBAL              2 (np)
+
+      308 LOAD_METHOD              8 (abs)
+
+      310 LOAD_FAST                8 (pivot)
+
+      312 CALL_METHOD              1
+
+      314 LOAD_CONST               5 (1)
+
+      316 COMPARE_OP               2 (==)
+
+      318 EXTENDED_ARG             1
+
+      320 POP_JUMP_IF_TRUE       396
+
+      322 LOAD_GLOBAL              2 (np)
+
+      324 LOAD_METHOD              8 (abs)
+
+      326 LOAD_FAST                8 (pivot)
+
+      328 CALL_METHOD              1
+
+      330 LOAD_FAST                2 (PH)
+
+      332 LOAD_CONST               5 (1)
+
+      334 BINARY_SUBTRACT
+
+      336 COMPARE_OP               2 (==)
+
+      338 EXTENDED_ARG             1
+
+      340 POP_JUMP_IF_TRUE       396
+
+      342 LOAD_ASSERTION_ERROR
+
+      344 RAISE_VARARGS            1
+
+      346 JUMP_FORWARD            48 (to 396)
+
+
+      30     >>  348 LOAD_GLOBAL              2 (np)
+
+      350 LOAD_METHOD              8 (abs)
+
+      352 LOAD_FAST                8 (pivot)
+
+      354 CALL_METHOD              1
+
+      356 LOAD_CONST               7 (2)
+
+      358 COMPARE_OP               2 (==)
+
+      360 EXTENDED_ARG             1
+
+      362 POP_JUMP_IF_TRUE       388
+
+      364 LOAD_GLOBAL              2 (np)
+
+      366 LOAD_METHOD              8 (abs)
+
+      368 LOAD_FAST                8 (pivot)
+
+      370 CALL_METHOD              1
+
+      372 LOAD_FAST                2 (PH)
+
+      374 LOAD_CONST               7 (2)
+
+      376 BINARY_SUBTRACT
+
+      378 COMPARE_OP               2 (==)
+
+      380 EXTENDED_ARG             1
+
+      382 POP_JUMP_IF_TRUE       388
+
+      384 LOAD_ASSERTION_ERROR
+
+      386 RAISE_VARARGS            1
+
+
+      31     >>  388 LOAD_FAST                8 (pivot)
+
+      390 LOAD_CONST               7 (2)
+
+      392 INPLACE_FLOOR_DIVIDE
+
+      394 STORE_FAST               8 (pivot)
+
+
+      32     >>  396 LOAD_FAST                0 (matrix)
+
+      398 LOAD_FAST                4 (col)
+
+      400 DUP_TOP_TWO
+
+      402 BINARY_SUBSCR
+
+      404 LOAD_FAST                8 (pivot)
+
+      406 INPLACE_MULTIPLY
+
+      408 ROT_THREE
+
+      410 STORE_SUBSCR
+
+
+      33         412 LOAD_FAST                0 (matrix)
+
+      414 LOAD_FAST                4 (col)
+
+      416 DUP_TOP_TWO
+
+      418 BINARY_SUBSCR
+
+      420 LOAD_FAST                2 (PH)
+
+      422 INPLACE_MODULO
+
+      424 ROT_THREE
+
+      426 STORE_SUBSCR
+
+
+      35         428 LOAD_GLOBAL              2 (np)
+
+      430 LOAD_METHOD              4 (argwhere)
+
+      432 LOAD_FAST                0 (matrix)
+
+      434 LOAD_CONST               0 (None)
+
+      436 LOAD_CONST               0 (None)
+
+      438 BUILD_SLICE              2
+
+      440 LOAD_FAST                4 (col)
+
+      442 LOAD_FAST                3 (extra)
+
+      444 BINARY_ADD
+
+      446 BUILD_TUPLE              2
+
+      448 BINARY_SUBSCR
+
+      450 CALL_METHOD              1
+
+      452 LOAD_METHOD              5 (flatten)
+
+      454 CALL_METHOD              0
+
+      456 STORE_FAST               9 (others)
+
+
+      37         458 LOAD_FAST                9 (others)
+
+      460 GET_ITER
+
+      >>  462 FOR_ITER               154 (to 618)
+
+      464 STORE_FAST              10 (i)
+
+
+      38         466 LOAD_FAST               10 (i)
+
+      468 LOAD_FAST                4 (col)
+
+      470 COMPARE_OP               2 (==)
+
+      472 EXTENDED_ARG             1
+
+      474 POP_JUMP_IF_FALSE      480
+
+      476 EXTENDED_ARG             1
+
+      478 JUMP_ABSOLUTE          462
+
+
+      39     >>  480 LOAD_FAST                6 (used_for_row)
+
+      482 LOAD_FAST               10 (i)
+
+      484 DUP_TOP_TWO
+
+      486 BINARY_SUBSCR
+
+      488 LOAD_FAST                6 (used_for_row)
+
+      490 LOAD_FAST                4 (col)
+
+      492 BINARY_SUBSCR
+
+      494 INPLACE_OR
+
+      496 ROT_THREE
+
+      498 STORE_SUBSCR
+
+
+      40         500 LOAD_FAST                4 (col)
+
+      502 LOAD_FAST                1 (graphlen)
+
+      504 COMPARE_OP               0 (<)
+
+      506 EXTENDED_ARG             2
+
+      508 POP_JUMP_IF_FALSE      548
+
+
+      41         510 LOAD_FAST                0 (matrix)
+
+      512 LOAD_FAST               10 (i)
+
+      514 DUP_TOP_TWO
+
+      516 BINARY_SUBSCR
+
+      518 LOAD_FAST                0 (matrix)
+
+      520 LOAD_FAST                4 (col)
+
+      522 BINARY_SUBSCR
+
+      524 LOAD_FAST                0 (matrix)
+
+      526 LOAD_FAST               10 (i)
+
+      528 LOAD_FAST                4 (col)
+
+      530 LOAD_FAST                3 (extra)
+
+      532 BINARY_ADD
+
+      534 BUILD_TUPLE              2
+
+      536 BINARY_SUBSCR
+
+      538 BINARY_MULTIPLY
+
+      540 INPLACE_SUBTRACT
+
+      542 ROT_THREE
+
+      544 STORE_SUBSCR
+
+      546 JUMP_FORWARD            50 (to 598)
+
+
+      43     >>  548 LOAD_FAST                0 (matrix)
+
+      550 LOAD_FAST               10 (i)
+
+      552 LOAD_FAST                4 (col)
+
+      554 LOAD_FAST                3 (extra)
+
+      556 BINARY_ADD
+
+      558 BUILD_TUPLE              2
+
+      560 BINARY_SUBSCR
+
+      562 LOAD_CONST               2 (0)
+
+      564 COMPARE_OP               3 (!=)
+
+      566 EXTENDED_ARG             2
+
+      568 POP_JUMP_IF_FALSE      598
+
+
+      44         570 LOAD_FAST                0 (matrix)
+
+      572 LOAD_FAST               10 (i)
+
+      574 BINARY_SUBSCR
+
+      576 LOAD_FAST                0 (matrix)
+
+      578 LOAD_FAST                4 (col)
+
+      580 BINARY_SUBSCR
+
+      582 BINARY_SUBTRACT
+
+      584 LOAD_FAST                2 (PH)
+
+      586 BINARY_MODULO
+
+      588 LOAD_FAST                0 (matrix)
+
+      590 LOAD_FAST               10 (i)
+
+      592 STORE_SUBSCR
+
+      594 EXTENDED_ARG             2
+
+      596 JUMP_ABSOLUTE          548
+
+
+      45     >>  598 LOAD_FAST                0 (matrix)
+
+      600 LOAD_FAST               10 (i)
+
+      602 DUP_TOP_TWO
+
+      604 BINARY_SUBSCR
+
+      606 LOAD_FAST                2 (PH)
+
+      608 INPLACE_MODULO
+
+      610 ROT_THREE
+
+      612 STORE_SUBSCR
+
+      614 EXTENDED_ARG             1
+
+      616 JUMP_ABSOLUTE          462
+
+
+      47     >>  618 LOAD_FAST                4 (col)
+
+      620 LOAD_CONST               5 (1)
+
+      622 INPLACE_ADD
+
+      624 STORE_FAST               4 (col)
+
+      626 JUMP_ABSOLUTE           48
+
+
+      49     >>  628 LOAD_GLOBAL              2 (np)
+
+      630 LOAD_METHOD              9 (array)
+
+      632 LOAD_FAST                0 (matrix)
+
+      634 CALL_METHOD              1
+
+      636 LOAD_FAST                2 (PH)
+
+      638 BINARY_MODULO
+
+      640 STORE_FAST               0 (matrix)
+
+
+      50         642 LOAD_CONST               8 (<code object <listcomp> at 0x101093b30,
+      file "/private/tmp/a.py", line 50>)
+
+      644 LOAD_CONST               4 (''rref.<locals>.<listcomp>'')
+
+      646 MAKE_FUNCTION            0
+
+      648 LOAD_FAST                6 (used_for_row)
+
+      650 GET_ITER
+
+      652 CALL_FUNCTION            1
+
+      654 RETURN_VALUE
+
+
+      Disassembly of <code object <listcomp> at 0x101093660, file "/private/tmp/a.py",
+      line 8>:
+
+      8           0 BUILD_LIST               0
+
+      2 LOAD_FAST                0 (.0)
+
+      >>    4 FOR_ITER                14 (to 20)
+
+      6 STORE_FAST               1 (i)
+
+      8 LOAD_GLOBAL              0 (set)
+
+      10 LOAD_FAST                1 (i)
+
+      12 BUILD_LIST               1
+
+      14 CALL_FUNCTION            1
+
+      16 LIST_APPEND              2
+
+      18 JUMP_ABSOLUTE            4
+
+      >>   20 RETURN_VALUE
+
+
+      Disassembly of <code object <listcomp> at 0x101093b30, file "/private/tmp/a.py",
+      line 50>:
+
+      50           0 BUILD_LIST               0
+
+      2 LOAD_FAST                0 (.0)
+
+      >>    4 FOR_ITER                12 (to 18)
+
+      6 STORE_FAST               1 (x)
+
+      8 LOAD_GLOBAL              0 (sorted)
+
+      10 LOAD_FAST                1 (x)
+
+      12 CALL_FUNCTION            1
+
+      14 LIST_APPEND              2
+
+      16 JUMP_ABSOLUTE            4
+
+      >>   18 RETURN_VALUE'
+  assert:
+  - type: python
+    value: file://decompile_py_rref.py:assert_decompile_bytecode
+- description: Test if the model can disassemble a simple Python function from its
+    bytecode.
+  vars:
+    prompt: 'Disassemble the following python into a function called foo and return the code in ```python ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.:
+
+
+      0 LOAD_FAST                0 (a)
+
+      2 LOAD_FAST                1 (b)
+
+      4 LOAD_FAST                0 (a)
+
+      6 BINARY_MULTIPLY
+
+      8 BINARY_ADD
+
+      10 RETURN_VALUE'
+  assert:
+  - type: python
+    value: file://decompile_py_simple.py:check
+- description: Test if the model can write a Python function that removes excess indentation
+    from a given block of code.
+  vars:
+    prompt: Write a python function `dedent(str)` that takes as input a string of
+      python code and de-dents it maximally. Lines that are entirely blank don't count and return the whole dedent function code in ```python  ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..
+  assert:
+  - type: python
+    value: file://dedent_code_fn.py:dedent_assertion
+- description: This test case checks if the model can debug a docker cuda error
+  vars:
+    prompt: 'nicholas@server:~/project$ sudo docker start myproject
+
+      [sudo] password for nicholas:
+
+      Error response from daemon: could not select device driver "" with capabilities:
+      [[gpu]]
+
+      Error: failed to start containers: myproject'
+  assert:
+  - type: python
+    value: file://docker_cuda.py:assert_docker_cuda_fix
+- description: Test if the model can successfully uudecode a given string.
+  vars:
+    prompt: 'uudecode this string:
+
+
+      H,3DR-S<-"C(X,C<U#0HT.3(V-@T*-C`X,C8-"C(X,S8V#0HR,#<Q-0``'
+  assert:
+  - type: python
+    value: file://do_uudecode.py:check_uudecode_response
+- description: Test if the model can write a C program that draws an image. This test
+    requires the ability to understand the .bmp specification, and draw a flag that
+    can be correctly parsed and seen by the evaluator.
+  vars:
+    prompt: Write me a C program that emits a .bmp that's a depiction of an american
+      flag to stdout and return the code in ```c literals and Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..
+  assert:
+  - type: python
+    value: file://draw_flag_bmp.py:assert_flag_draw_bmp
+- description: Test if the model can understand a vague BNF-style grammar and write
+    a Python function that evaluates expressions based on the grammar rules.
+  vars:
+    prompt: 'Given this BNF-style grammar write a Python function `evaluate(str)`
+      that evaluates the expression and return the code in ````python ```` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.
+
+
+      <expression> ::= <term> | <expression> ''+'' <term> | <expression> ''-'' <term>
+
+
+      <term> ::= <factor> | <term> ''*'' <factor> | <term> ''/'' <factor>
+
+
+      <factor> ::= <number> | ''('' <expression> '')'' | <prefix-op> <factor>
+
+
+      <prefix-op> ::= ''sin'' | ''cos''
+
+
+      <number> ::= <digit> | <number> <digit>
+
+
+      <digit> ::= ''0'' | ''1'' | ''2'' | ''3'' | ''4'' | ''5'' | ''6'' | ''7'' |
+      ''8'' | ''9''
+
+
+      For example you can evaluate this
+
+
+      sin(3 + 2 * 4) - cos(15) = -0.240302'
+  assert:
+  - type: python
+    value: file://easy_parser_generator.py:assert_bnf_evaluator
+- description: Test if the model can understand a vague error for an emacs lisp question.
+  vars:
+    prompt: In emacs lisp how do I silence "Process python-process finished"
+  assert:
+  - type: python
+    value: file://emacs_lisp_silence_cmd.py:check_emacs_lisp_silence_python
+- description: Test if the model can interpret a minified JavaScript function and
+    explain its function.
+  vars:
+    prompt: 'What does this code do
+
+
+      function q(e){if(e<=1)return!1;if(e<=3)return!0;if(e%2==0||e%3==0)return!1;for(let
+      r=5;r*r<=e;r+=6)if(e%r==0||e%(r+2)==0)return!1;return!0}function z(){const e=[];let
+      r=2;for(;e.length<20;)q(r)&&e.push(r),r++;return e.reverse(),e.reverse(),e}console.log(z());'
+  assert:
+  - type: python
+    value: file://explain_code_prime.py:get_assertion
+- description: Test if the model can interpret a minified and obfuscated JavaScript
+    function and explain its function.
+  vars:
+    prompt: 'What does this code do
+
+
+      function z(){let e=[],n=[];for(let r=2;e.length<20;r++)(n=n.map(e=>e-1)).some(e=>0===e)?n=n.map((n,r)=>0===n?e[r]:n):(e.push(r),n.push(r));return
+      e}console.log(z());'
+  assert:
+  - type: python
+    value: file://explain_code_prime2.py:get_assertion
+- description: Test if the model can correctly explain what the VPBROADCASTB instruction
+    does.
+  vars:
+    prompt: What does the VPBROADCASTB instruction do?
+  assert:
+  - type: python
+    value: file://explain_vbroadcast.py:get_assertion
+- description: Test if the model can interact with an SQLite database and provide
+    the correct command to add a new person with specific criteria.
+  vars:
+    prompt: 'I''ve just run `sqlite3 people.db` and you are now in the interpreter.
+      I want to add another person named Victor. They should be as old as the youngest
+      person. And have the most popular profession. What command should I run?
+
+
+      On each round you should just give me just one command to type, I''ll run it
+      exactly as-is, and give you the exact output. I will not make any changes. So
+      do not write any placeholder text. I''ll get started:
+
+
+      INPUT: `.version`
+
+
+      OUTPUT: ```SQLite 3.39.5 2022-10-14 20:58:05```
+
+
+      INPUT: `.database`
+
+
+      OUTPUT: ```main: people.db r/w```
+
+
+      Now your turn. What do you want to run? Do not explain yourself, just give me
+      exactly one command, ending with ; if necessary. Run small queries one at a
+      time; think step by step. Start your response with INPUT:'
+  assert:
+  - type: python
+    value: file://explore_sql_db.py:assert_sql_interaction
+- description: 'Test if the model can accurately extract and identify invalid email
+    addresses from a given text file. Models that are '
+  vars:
+    prompt: 'Extract all the email addresses that are invalid from this text file:
+
+
+
+      <foo-bar@example.com>: Domain example.com does not accept mail (nullMX)
+
+
+      <noperson628@gmail.com>: host mail.banglemail.com[138.68.190.241] said: 550
+
+      5.1.1 <noperson628@gmail.com>: Recipient address rejected: User unknown in
+
+      virtual alias table (in reply to RCPT TO command)
+
+
+      <againredacted@example.info>: host emx.mail.ru[218.62.518.180] said: 550
+
+      Message was not accepted -- invalid mailbox.  Local mailbox
+
+      againredacted@example.info is unavailable: user not found (in reply to end
+
+      of DATA command)
+
+
+      <xsz032by05wfk5jpe@mail4you.biz>: host emx.mail.ru[217.69.139.180] said: 550
+
+      Message was not accepted -- invalid mailbox.  Local mailbox
+
+      xsz032by05wfk5jpe@mail4you.biz is unavailable: user not found (in reply to
+
+      end of DATA command)
+
+
+      <wontsay@bestpay.com.cn>: host mta-ent.21cn.com[183.56.203.132] said: 543
+
+      suspected spams or account(IP) exception (in reply to end of DATA command)
+
+
+      <redactedfinally@gmail.com>: host gmail-smtp-in.l.google.com[142.250.27.26]
+      said:
+
+      550-5.1.1 The email account that you tried to reach does not exist. Please
+
+      try 550-5.1.1 double-checking the recipient''s email address for typos or'
+  assert:
+  - type: python
+    value: file://extract_emails.py:check_email_extraction
+- description: Test if the model can extract paper tiles from a block of text.
+  vars:
+    prompt: 'Extract a list the titles of the papers from the following list of references.
+
+      Start your response
+
+
+      ```json
+
+      [title_1, title_2, ...]
+
+      ```
+
+
+      Here''s the block of text:
+
+
+      A Suffix Arrays                                                         [45]
+      SHOKRI, R., STRONATI, M., SONG, C., AND
+
+      A suffix of length k of a string x are the last k characters (or,       SHMATIKOV,
+      V. Membership inference attacks against
+
+      tokens) of this string, i.e,. x[−k:]                                    machine
+      learning models. In IEEE Symposium on
+
+      . If we want to know: “was                                              Security
+      and Privacy (2017).
+
+      0 100 200 300                                                           [46]
+      SOLDAINI, L. AI2 Dolma: 3 trillion token open corpus
+
+      length of k-gram                                                        for
+      language model pretraining, 2023.
+
+      104                                                                     [47]
+      SOMEPALLI, G., SINGLA, V., GOLDBLUM, M., GEIPING, J., AND GOLDSTEIN, T. Diffusion
+      art or digital
+
+      105                                                                     forgery?
+      Investigating data replication in diffusion models. In CVPR (2023).
+
+      106                                                                     [48]
+      SOUTHWOOD, T. R. E., AND HENDERSON, P. A. Ecological methods. John Wiley & Sons,
+      2009.
+
+      # generated kgrams                                                      [49]
+      TOUVRON, H., LAVRIL, T., IZACARD, G., MARTINET, X., LACHAUX, M.-A., LACROIX,
+      T., ROZIÈRE, B., GOYAL,
+
+      in training data                                                        N.,
+      HAMBRO, E., AZHAR, F., RODRIGUEZ, A., JOULIN, A., GRAVE, E., AND LAMPLE,
+
+      Figure 14: The suffix length threshold k significantly impacts          G. LLaMA:
+      Open and Efficient Foundation Language
+
+      the rate of data determined to be memorized. We set k = 50.             Models,
+      2023.
+
+      x                                                                       [50]
+      TOUVRON, H., MARTIN, L., STONE, K., ALBERT, P.,
+
+      ′                                                                       ALMAHAIRI,
+      A., BABAEI, Y., BASHLYKOV, N., BATRA, S., BHARGAVA, P., BHOSALE, S., ET AL.
+      LLaMA
+
+      [−k:]                                                                   2: Open
+      foundation and fine-tuned chat models. arXiv
+
+      in x”, then we would have to do an O(n) search checking                 preprint
+      arXiv:2307.09288 (2023).
+
+      all suffixes of x. This linear scan is expensive if x is large,         [51]
+      TTI. Introducing Falcon 180b.
+
+      as it is in training large language models, often terabytes in          [52]
+      YEOM, S., GIACOMELLI, I., FREDRIKSON, M., AND
+
+      size. Instead, a suffix array will enable us to do this search          JHA,
+      S. Privacy risk in machine learning: Analyzing
+
+      efficiently in O(logn) time.                                            the
+      connection to overfitting. In IEEE CSF (2018).
+
+      A suffix array s over a dataset X, denoted as s(X) is a                 [53]
+      ZELTERMAN, D. Smooth nonparametric estimation of
+
+      data structure that indexes all suffixes of this string in a            the
+      quantile function. Journal of statistical planning
+
+      lexicographically-sorted ordering. This sorting, as we will             and
+      inference 26, 3 (1990), 339–352.
+
+      see, is important as it enables efficient binary searches for a         [54]
+      ZHANG, S., ROLLER, S., GOYAL, N., ARTETXE, M.,
+
+      particular substring/suffix.                                            CHEN,
+      M., CHEN, S., DEWAN, C., DIAB, M., LI, X.,
+
+      In the simplest form, we can consider the suffix array of a             LIN,
+      X. V., MIHAYLOV, T., OTT, M., SHLEIFER, S.,
+
+      word, e.g., x =“banana”. The following is the set of all suffixes       SHUSTER,
+      K., SIMIG, D., KOURA, P. S., SRIDHAR,
+
+      as obtained by traversing the string backwards and keeping only         A.,
+      WANG, T., AND ZETTLEMOYER, L. Opt: Open
+
+      unique suffixes, in this case, all suffixes: {“a”, “na”,                pre-trained
+      transformer language models, 2022.
+
+      “ana”, “nana”, “ anana”, “banana”}, which are represented by            [55]
+      ZIEGLER, A. Github Copilot research recitation, 2021.
+
+      the indices s = {5,4,3,2,1,0}. In this form, we still require           [56]
+      ZOU, A., WANG, Z., KOLTER, J. Z., AND FREDRIKSON, M. Universal and transferable
+      adversarial
+
+      an O(n) search as there is no ordering. However, a suffix array         attacks
+      on aligned language models. arXiv preprint
+
+      will store these suffixes in a lexicographically sorted ordering.       arXiv:2307.15043
+      (2023).'
+  assert:
+  - type: python
+    value: file://extract_references.py:assert_paper_titles_extraction
+
+- description: Test if the model can optimize a given Python program for speed and
+    memory efficiency.
+  vars:
+    prompt: "I have this program\n\nimport numpy as np\ndef diff(out, templates):\n\
+      \    return (out[:, None, :] - templates[None, :, :]).square().sum(2)\n\nMake\
+      \ it faster and more memory efficient without expanding the arrays. Call it\
+      \ `diff` still.\n\"\"\"\n\ntracer = \"\"\"\nimport tracemalloc\nimport numpy\
+      \ as np\n\nif __name__ == \"__main__\":\n    tracemalloc.start()  # Start tracing\n\
+      \n    snapshot1 = tracemalloc.take_snapshot()  # Before execution\n    diff(np.arange(10000).reshape((100,\
+      \ 100)), np.arange(10000).reshape((100, 100)))\n    snapshot2 = tracemalloc.take_snapshot()\
+      \  # After execution\n\n    # Calculate the difference in memory usage\n   \
+      \ current, peak = tracemalloc.get_traced_memory()\n    tracemalloc.stop()  #\
+      \ Stop tracing\n\n    if peak < 10**6:\n        print(\"Efficient\")"
+  assert:
+  - type: python
+    value: file://faster_l2_diff.py:assert_fast_l2
+- description: Test if a model can find math errors in the latex source of a paper.
+  vars:
+    prompt: "# Setup\n\nWhich of the following equations are incorrect according to\
+      \ the specification?\n\n# Notation\n\nA neural network is a function $F(x) =\
+      \ y$ that accepts an input $x \\in \\mathbb{R}^n$\nand produces an output $y\
+      \ \\in \\mathbb{R}^m$.\nThe model $F$ also implicitly depends on some model\
+      \ parameters $\\theta$; in our work\nthe model is fixed, so for convenience\
+      \ we don't show the dependence on $\\theta$.\n\nIn this paper we focus on neural\
+      \ networks used as an $m$-class classifier.\nThe output of the network is computed\
+      \ using the softmax function,\nwhich ensures that the output vector $y$ satisfies\n\
+      $0 \\le y_i \\le 1$ and $y_1 + \\dots + y_m = 1$.\nThe output vector $y$ is\
+      \ thus treated as a probability distribution, i.e.,\n$y_i$ is treated as the\
+      \ probability that input $x$ has class $i$.\nThe classifier assigns the label\
+      \ $C(x) = \\arg\\max_i F(x)_i$ to the input $x$.\nLet $C^*(x)$ be the correct\
+      \ label of $x$.\nThe inputs to the softmax function are called \\emph{logits}.\n\
+      \nWe use the notation from Papernot et al. \\cite{distillation}: define $F$\
+      \ to\nbe the full neural network including the softmax function, $Z(x) = z$\
+      \ to be the output of\nall layers except the softmax (so $z$ are the logits),\
+      \ and\n\\begin{equation*}\nF(x) = \\softmax(Z(x)) = y.\n\\end{equation*}\nA\
+      \ neural network typically \\footnote{Most simple networks have this simple\n\
+      \  linear structure, however other more sophisticated networks have\n  more\
+      \ complicated structures (e.g., ResNet \\cite{he2016deep} and Inception \\cite{szegedy2015rethinking}).\n\
+      \  The network architecture does not impact our attacks.}\nconsists of layers\n\
+      \\begin{equation*}\nF = \\softmax \\circ F_n \\circ F_{n-1} \\circ \\cdots \\\
+      circ F_1\n\\end{equation*}\nwhere\n\\begin{equation*}\nF_i(x)  = \\sigma(\\\
+      theta_i \\cdot x) + \\hat\\theta_i\n\\end{equation*}\nfor some non-linear activation\
+      \ function $\\sigma$, some matrix $\\theta_i$ of model\nweights, and some vector\
+      \ $\\hat\\theta_i$ of model biases. Together $\\theta$ and\n$\\hat\\theta$ make\
+      \ up the model parameters.\nCommon choices of $\\sigma$\nare tanh \\cite{mishkin2015all},\
+      \ sigmoid, ReLU \\cite{maas2013rectifier}, or ELU \\cite{clevert2015fast}.\n\
+      In this paper we focus primarily on networks that use a ReLU activation function,\n\
+      as it currently is the most widely used\nactivation function\n\\cite{szegedy2015rethinking,springenberg2014striving,mishkin2015all,distillation}.\n\
+      \n\n# Specification:\n\nWe define an objective function $f$ such that\n$C(x+\\\
+      delta) = t$ if and only if $f(x+\\delta) \\le 0$.\nThere are many possible choices\
+      \ for $f$:\n\n# The equations\n\n\\begin{align*}\nf_{1}(x') &= -\\loss_{F,t}(x')\
+      \ + 1\\\\\nf_{2}(x') &= (\\max_{i \\ne t}( F(x')_i) - F(x')_t)^+\\\\\nf_{3}(x')\
+      \ &= \\text{softplus}(\\max_{i \\ne t}(F(x')_i) - F(x')_t)-\\log(2)\\\\\nf_{4}(x')\
+      \ &= (0.5 - F(x')_t)^+\\\\\nf_{5}(x') &= -\\log(2 F(x')_t - 2)\\\\\nf_{6}(x')\
+      \ &= (\\max_{i \\ne t}( Z(x')_i) - Z(x')_t)^+\\\\\nf_{7}(x') &= \\text{softplus}(\\\
+      max_{i \\ne t}(Z(x')_i) - Z(x')_t)-\\log(2)\n\\end{align*}\nwhere $s$ is the\
+      \ correct classification, $(e)^+$ is short-hand for\n$\\max(e,0)$, $\\text{softplus}(x)\
+      \ = \\log(1+\\exp(x))$, and\n$\\loss_{F,s}(x)$ is the cross entropy loss for\
+      \ $x$.\n\n# Your task\n\nConsider each equation one by one. End your answer\
+      \ with a python list of numbers [1,2,3,4,5,6,7] for those that are wrong."
+  assert:
+  - type: python
+    value: file://find_bug_in_paper.py:get_assertion
+- description: This test checks is the model can figure out from context when it's
+    right to use extend versus append.
+  vars:
+    prompt: 'Why won''t this function work as expected? List exactly one reason.
+
+
+      ```
+
+      def make_op_with_history(config):
+
+      how = config[0]
+
+      args = config[1:]
+
+
+      if how.split()[0] == ''dot_from_papers'':
+
+      return [(how, make_op(config))]
+
+      if how.split()[0] in [''const_add'', ''const_mul'']:
+
+      return [(how, make_op(config))] + make_op_with_history(config[1])
+
+      out = []
+
+      for arg in args:
+
+      hist = make_op_with_history(arg)
+
+      out.append(hist)
+
+      return [(how, make_op(config))] + out
+
+      ```'
+  assert:
+  - type: python
+    value: file://fix_append_vs_extend.py:check_append_not_extend
+- description: Test if the model can fix broken JSON objects.
+  vars:
+    prompt: 'Write me a python function called fix_json that fixes broken JSON objects,
+      and returns the parsed object. I''ll pass the JSON object as a string and it
+      should fix and return the code in ```python literals and do not include hypen in code Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..Use ast.literal_eval and recursively clean the structure:
+
+      - Incorrect parenthesis, e.g., {"a": (5, 4)} -> {"a": [5, 4]}
+
+      - Incorrect single quotes, e.g., {''a'': 5} -> {"a": 5}
+
+      - False/True -> false/true'
+  assert:
+  - type: python
+    value: file://fix_json.py:check_fix_json_function
+- description: Test if the model can identify a node error message
+  vars:
+    prompt: 'How do I fix this
+
+
+      nicholas@npc site % http-server
+
+      dyld[63275]: Library not loaded: /opt/homebrew/opt/icu4c/lib/libicui18n.73.dylib
+
+      Referenced from: <758FD1B7-1836-321E-A1D9-E47EC3C39702> /opt/homebrew/Cellar/node/21.5.0/bin/node
+
+      Reason: tried: ''/opt/homebrew/opt/icu4c/lib/libicui18n.73.dylib'' (no such
+      file), ''/System/Volumes/Preboot/Cryptexes/OS/opt/homebrew/opt/icu4c/lib/libicui18n.73.dylib''
+      (no such file), ''/opt/homebrew/opt/icu4c/lib/libicui18n.73.dylib'' (no such
+      file), ''/opt/homebrew/Cellar/icu4c/74.2/lib/libicui18n.73.dylib'' (no such
+      file), ''/System/Volumes/Preboot/Cryptexes/OS/opt/homebrew/Cellar/icu4c/74.2/lib/libicui18n.73.dylib''
+      (no such file), ''/opt/homebrew/Cellar/icu4c/74.2/lib/libicui18n.73.dylib''
+      (no such file)'
+  assert:
+  - type: python
+    value: file://fix_node_error.py:assert_node_fix_suggestion
+- description: Test if the model can explain a poorly worded error message in a short
+    threaded python program.
+  vars:
+    prompt: "In this program\n\nfrom multiprocessing import Pool\nfrom openai import\
+      \ OpenAI\n\ntxt = open(\"/tmp/aa.txt\").read().split(\"\\n\\n\")\n\nfrom multiprocessing\
+      \ import Pool\nimport subprocess\n\nclient = OpenAI(api_key=\"sk-XXXXXXXXXXXXXX\"\
+      )\ndef create_speech_file(index, text):\n    response = client.audio.speech.create(\n\
+      \        model=\"tts-1-hd\",\n        voice=\"nova\",\n  input=text\n    )\n\
+      \    filename = f\"output{index}.mp3\"\n    response.stream_to_file(filename)\n\
+      \    return filename\n\ndef merge_mp3(files, output):\n    with open(\"filelist.txt\"\
+      , \"w\") as file:\n  for f in files:\n            file.write(f\"file '{f}'\\\
+      n\")\n\n    cmd = [\"ffmpeg\", \"-f\", \"concat\", \"-safe\", \"0\", \"-i\"\
+      , \"filelist.txt\", \"-c\", \"copy\", output]\n    subprocess.run(cmd)\n\nif\
+      \ __name__ == '__main__':\n    # Step 1: Parallelize speech file creation  \
+      \                                                                          \
+      \                                                \n    with Pool(8) as pool:\n\
+      \  mp3_files = pool.starmap(create_speech_file, enumerate(txt))\n\n    # Step\
+      \ 2: Merge the generated MP3 files                                         \
+      \                                                                          \
+      \            \n    output_file = \"merged_output.mp3\"\n    merge_mp3(mp3_files,\
+      \ output_file)\n\nWhy am I getting this error?\n\nException in thread Thread-3:\n\
+      Traceback (most recent call last):\n  File \"/opt/homebrew/Cellar/python@3.9/3.9.16/Frameworks/Python.framework/Versions/3.9/lib/python3.9/threading.py\"\
+      , line 980, in _bootstrap_inner\n    self.run()\n  File \"/opt/homebrew/Cellar/python@3.9/3.9.16/Frameworks/Python.framework/Versions/3.9/lib/python3.9/threading.py\"\
+      , line 917, in run\n    self._target(*self._args, **self._kwargs)\n  File \"\
+      /opt/homebrew/Cellar/python@3.9/3.9.16/Frameworks/Python.framework/Versions/3.9/lib/python3.9/multiprocessing/pool.py\"\
+      , line 576, in _handle_results\n    task = get()\n  File \"/opt/homebrew/Cellar/python@3.9/3.9.16/Frameworks/Python.framework/Versions/3.9/lib/python3.9/multiprocessing/connection.py\"\
+      , line 251, in recv\n    return _ForkingPickler.loads(buf.getbuffer())\nTypeError:\
+      \ __init__() missing 2 required keyword-only arguments: 'response' and 'body'"
+  assert:
+  - type: python
+    value: file://fix_threading_issue.py:assert_identifies_pickling_error
+- description: Test if the model can identify and fix an issue with a tokenizer in
+    a Python code snippet. Identifying the problem is in the regex, and fixing the
+    regex, are both hard.
+  vars:
+    prompt: 'Fix this tokenizer keeping it as similar as possible
+
+
+      class Tokenizer:
+
+      def __init__(self, input_str):
+
+      self.tokens = re.findall(r''\d+|(\+|\-|\*|/|sin|cos|\(|\))'', input_str)
+
+      self.position = 0
+
+
+      def get_next_token(self):
+
+      if self.position >= len(self.tokens):
+
+      return None
+
+      token = self.tokens[self.position]
+
+      self.position += 1
+
+      return token
+
+
+      def peek_next_token(self):
+
+      if self.position >= len(self.tokens):
+
+      return None
+
+      return self.tokens[self.position]'
+  assert:
+  - type: python
+    value: file://fix_tokenizer.py:assert_tokenizer_fix
+- description: Test if the model can fix and explain a bug in PyTorch code related
+    to forgetting to zero gradients.
+  vars:
+    prompt: "Fix the bug in this code. Rewrite the entire code exactly as-is but just\
+      \ fix any bugs.\\n\\n{import torch\nimport torch.nn as nn\nimport torch.optim\
+      \ as optim\n\nclass SimpleNet(nn.Module):\n    def __init__(self):\n       \
+      \ super(SimpleNet, self).__init__()\n        self.fc = nn.Linear(1, 1)\n\n \
+      \   def forward(self, x):\n        return self.fc(x)\n\ndef PGD(model, input,\
+      \ target, loss_fn, epsilon, alpha, num_iter):\n    perturbation = torch.zeros_like(input,\
+      \ requires_grad=True)\n\n    for i in range(num_iter):\n        output = model(input\
+      \ + perturbation)\n        loss = loss_fn(output, target)\n\n        loss.backward()\n\
+      \n        # Update perturbation\n        perturbation_grad = perturbation.grad.data\n\
+      \        perturbation.data = perturbation.data + alpha * perturbation_grad.sign()\n\
+      \        perturbation.data = torch.clamp(perturbation.data, -epsilon, epsilon)\n\
+      \        perturbation.grad.data.zero_()\n\n    return input + perturbation\n\
+      \nmodel = SimpleNet()\n\ninput = torch.tensor([[1.0]], requires_grad=True)\n\
+      target = torch.tensor([[2.0]])\n\nloss_fn = nn.MSELoss()\n\nepsilon = 0.1\n\
+      alpha = 0.01\nnum_iter = 2\n\nadversarial_input = PGD(model, input, target,\
+      \ loss_fn, epsilon, alpha, num_iter)\nprint(\"Resulting advex\", adversarial_input)\n\
+      ```}"
+  assert:
+  - type: python
+    value: file://fix_torch_backward.py:get_assertions
+- description: Test if the model can generate a .patch file to fix a bug in a given
+    Python code.
+  vars:
+    prompt: "Write a .patch file to stdout that will fix the bug in this tokenizer.\
+      \ Still keep the new file name the same after patching.\n\nI'll evaluate you\
+      \ based on my ability to do\n- echo [your patch] > fix.patch\n- patch < fix.patch\n\
+      - python3 run_tokenizer.py\n\nHere is the entirety of run_tokenizer.py:\n```python\n\
+      {import re\n\nclass Tokenizer:\n    def __init__(self, input_str):\n\n     \
+      \   self.position = 0\n        self.tokens = re.findall(r'\\d+|(\\+|\\-|\\*|/|sin|cos|\\\
+      (|\\))', input_str)\n\n    def get_next_token(self):\n        if self.position\
+      \ >= len(self.tokens):\n            return None\n        token = self.tokens[self.position]\n\
+      \        self.position += 1\n        return token\n\n    def peek_next_token(self):\n\
+      \        if self.position >= len(self.tokens):\n            return None\n  \
+      \      return self.tokens[self.position]}\n        ```"
+  assert:
+  - type: python
+    value: file://fix_with_patch.py:assert_patch_fixes_tokenizer
+- description: Test if the model can generate an HTML file using flexbox
+  vars:
+    prompt: Generate an HTML file that uses flexbox to create a webpage with a header
+      200px at the top (colored red), and the rest of the body split 100px for a left
+      sidebar (in blue), 100px for a right sidebar (in green), and the rest of the
+      page in the middle (in white).
+  assert:
+  - type: python
+    value: file://flexbox_webpage.py:get_assertion
+- description: Test if the model understands a rambling question about how to make
+    construction circle in FreeCAD.
+  vars:
+    prompt: In freecad I want to have a circle but only like for reference not to
+      actually be a circle but just so I can line up other lines to make a hexagon
+      for example, how do I do that
+  assert:
+  - type: python
+    value: file://freecad_construction.py:assert_freecad_construction_circle
+- description: Test if the model can write code to perform string slicing with vague
+    instructions.
+  vars:
+    prompt: Write me a function called `move` that, given a string x, returns all
+      possible alternate strings y' such that y' is derived from x by moving a substring
+      of x to an arbitrary position and return the code in ```python ``` literals and do not inlcude hypen in code Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..
+  assert:
+  - type: python
+    value: file://generate_string_moves.py:check
+- description: 'Test if the model can understand and interpret a request to gitignore
+    any file called '
+  vars:
+    prompt: gitignore any file called .KEYFILE anywhere under a directory foo, which
+      itself is anywhere
+  assert:
+  - type: python
+    value: file://gitignore_anywhere.py:assert_gitignore_pattern
+- description: This test case tests if the model can convert a Game of Life pattern
+    represented in RLE format to a numpy array.
+  vars:
+    prompt: 'Convert this game of life pattern
+
+
+      26$13b2o$14bo$14bobo$15b2o14$31b2o$30b2o$32bo13$46b2o$45b2o$47bo13$61b
+
+      2o$60b2o$62bo4$52b2o$52b2o$71bo$66b2ob3o$66bobobo$68bo$67b2o3$76b2o$
+
+      60b3o12b2o10bobo$52b3o7bo14bo8bo2bo4bo$51bo3bo5bo10b2o11b2o5b2o$50bo5b
+
+      o15bobo8b2o3bo8b2o$51bo3bo11b2o6bo9b2o10b2o$52b3o8b2obo2bo2bo2bo10bo2b
+
+      o$52bo2bo7b2o2b2o6bo11bobo$53b3o16bobo$53b2obo15b2o$54bobo$55bo3$52b2o
+
+      3b2o$52bobobobo$53b5o$54b3o$55bo7$54b2o$54b2o!
+
+
+      to a numpy array. Call the function `rle_to_arr(string, h, w)`
+
+      which should return a numpy array with .shape (h,w).
+
+      Fill the array with 1s, and empty with 0 and return the code in ```python ``` literals, do not include "-" in your answer Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..'
+  assert:
+  - type: python
+    value: file://gol_rle_decode.py:assert_rle_decode
+- description: Test if the model will hallucinate references that don't exist.
+  vars:
+    prompt: 'For each of the 6 references in the following paper, extract the title,
+      author, and year as a JSON array.
+
+
+      Write {1: {"title": "title", "author": "author", "year": "year"}, 2: ..., 3:
+      ..., 4: ..., 5: ..., 6: ...}
+
+
+      Paper:
+
+      {paper_title} {paper_body} {references}'
+  assert:
+  - type: python
+    value: file://hallucinate_reference.py:assert_no_hallucinated_references
+- description: Test if the model can correctly identify a block of text is uuencoded.
+  vars:
+    prompt: 'What encoding scheme does it look like this is encoded with?
+
+
+      H,3DR-S<-"C(X,C<U#0HT.3(V-@T*-C`X,C8-"C(X,S8V#0HR,#<Q-0``'
+  assert:
+  - type: python
+    value: file://identify_uuencode.py:get_assert
+- description: Test if the model can implement an interpreter for a new assembly language
+    from a text description.
+  vars:
+    prompt: 'Here is the description of a new assembly language:
+
+
+      * 8 registers (R1, R2, R3, R4, R5, R6, R7, R8) that can hold integers.
+
+      * 1 flag that can hold a boolean value (True or False).
+
+      * 100 memory addresses (0-99) that can hold integers.
+
+      * 1 instruction pointer that points to the current instruction being executed.
+
+
+      Each instruction is of the form
+
+      OP ARG1 ARG2 ...
+
+      where ARGn can be either a register (e.g., R1) or a constant (e.g., 10).
+
+
+      Labels are written with a lowercase word followed by colon.
+
+
+      The assembly language supports the following instructions:
+
+      * SET Rx C: Assigns the value C to register Rx.
+
+      * ADD Rx Ry Rz: Adds the values of Ry and Rz and stores the result in Rx.
+
+      * (similarly for SUB, MUL, DIV, MOD)
+
+      * EQ Rx Ry: Sets the flag to True if Rx and Ry are equal, False otherwise.
+
+      * (similarly for NEQ, LT (Rx < Ry), LTE, GT, GTE)
+
+      * INC/DEC Rx: Increments/Decrements the value of Rx by one.
+
+      * JMP L: Jumps to label L unconditionally.
+
+      * JT/JF (jump if true / jump if false) L: Jumps to label L if the flag is set
+      or not set.
+
+      * LOAD Rx M: Loads the value at memory address M into register Rx.
+
+      * STORE Rx M: Stores the value of register Rx into memory address M.
+
+      * HCF: Stops the program (with pizzazz)
+
+
+      For example here is a program to compute the first 20 square numbers (1, 4,
+      9, 16, 25, ...):
+
+
+      SET R1 0      // Counter for storing squares
+
+      SET R2 1      // Number to square
+
+
+      loop:
+
+      MUL R3 R2 R2  // R3 = R2 * R2
+
+      STORE R3 R1   // Store R3 at address R1
+
+      INC R1        // Increment address
+
+      INC R2        // Increment number
+
+      SET R3 20
+
+      EQ R1 R3      // Check if 20 squares are found
+
+      JF loop       // If not 20 squares found yet, continue finding
+
+
+      end:
+
+      HCF           // Stop program
+
+
+      Write me a python interpreter `evaluate(str)` that returns the resulting memory
+      state after running the program. For example, `evaluate(program)` should return
+      `[1, 4, 9, 16, 25, ...]` for the above program.'
+  assert:
+  - type: python
+    value: file://implement_assembly_interpreter.py:get_assertion
+- description: Test if the model understands the CRC-32 spec well enough to implement
+    it.
+  vars:
+    prompt: Write a c program that calculates the crc32 hash of the string 'correct
+      horse battery staple' and prints it to stdout. Dont call any builtin crc32 functions and return the code in ```c ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..
+  assert:
+  - type: python
+    value: file://implement_crc32.py:assert_crc32_implementation
+- description: Test if the model can correctly convert a list of indexes to a one-hot
+    vector in Python using JAX.
+  vars:
+    prompt: 'I have a list of indexes and I want to convert it to a one-hot vector
+      using JAX. The function should be jittable and should be named one_hot. It should
+      take two arguments: the first one is the indexes and the second one is the number
+      of possible labels. Just give me the code and return the code in ```python literals and do not include hypen in code Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.Use ast.literal_eval and recursively clean the structure.'
+  assert:
+  - type: python
+    value: file://jax_onehot.py:check_jax_one_hot
+- description: Test the knowledge cutoff of the model to see if it knows the LLAMA-2
+    hidden dimension size.
+  vars:
+    prompt: What is the hidden dimension of LLAMA-2 70b?
+  assert:
+  - type: python
+    value: file://knowledge_llama.py:get_assert
+- description: Test if a model knows some latex macros explained poorly
+  vars:
+    prompt: Latex format the word METHOD like Method but all caps with the other letters
+      lower
+  assert:
+  - type: python
+    value: file://latex_mini_caps.py:test_latex_textsc
+- description: Test if a model can fix a latex newline error in a caption
+  vars:
+    prompt: In latex when I force a newline in a caption with \\  it gives an error
+      saying \Hy@tempa has an extra } runaway argument?
+  assert:
+  - type: python
+    value: file://latex_protect.py:get_score
+- description: Test if a model can use latex renewcommand, and do a bit more than
+    what I actually asked.
+  vars:
+    prompt: Redfine \\paragraph to be \\bigskip\\textbf{}
+  assert:
+  - type: python
+    value: file://latex_redef.py:check_latex_redef
+- description: Test if the model can successfully convert unstructured data to JSON.
+  vars:
+    prompt: 'Create a JSON metadata for these models and return the json in ```json
+      ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.:
+
+
+      Mistral-7B-v0.1
+
+      RedPajama-INCITE-7B-Base
+
+      RedPajama-INCITE-Base-3B-v1
+
+      falcon40b
+
+      falcon7b
+
+      gpt2-xl
+
+      llama-65b
+
+      llama-7b
+
+      neo-1.3
+
+      neo-2.7
+
+      neo-6
+
+      open_llama_3b_v2
+
+      open_llama_7b_v2
+
+      opt-1.3b
+
+      opt-6.7b
+
+      pythia-1.4
+
+      pythia-1.4-dedup
+
+      pythia-6.9
+
+      pythia-6.9-dedup
+
+
+      With the format:
+
+
+      {"Mistral-7B-v0.1": {"size": 7, "dataset": "", "family": "Mistral"}, ...}
+
+
+      where family is one of
+
+
+      base = [
+
+      ''pythia'',
+
+      ''llama'',
+
+      ''Mistral'',
+
+      ''gpt2'',
+
+      ''opt'',
+
+      ''RedPajama'',
+
+      ''neo'',
+
+      ''open_llama'',
+
+      ''falcon''
+
+      ]
+
+
+      gpt2-xl is 1.5b parameters.'
+  assert:
+  - type: python
+    value: file://make_json.py:get_assertion
+- description: Test if the model can generate a SQL query to create a database table.
+  vars:
+    prompt: I'm working with a sqlite3 database. Write a query that creates a new
+      database with a table for peoples name, job, and age. Then add a researcher
+      named Nicholas who is 5. Write this directly as a sql query that I can pipe
+      into sqlite3. Do not give the 'sqlite' command, I'll just do `sqlite3 database.db
+      < [your output]` and table name must be people, sql query must be inside ```s  ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..
+  assert:
+  - type: python
+    value: file://make_sqlite_table.py:assert_sql_table_creation
+- description: Test if the model can create a tree from a string.
+  vars:
+    prompt: "class Node:\ndef __init__(self, name, parent=None):\n    self.name =\
+      \ name\n    self.parent = parent\n    self.children = []\n    if parent:\n \
+      \       self.parent.children.append(self)\ndef __repr__(self):\n    if self.children\
+      \ == []:\n        return self.name\n    return '('+self.name + ' ' + ' '.join(repr(c)\
+      \ for c in self.children)+')'\n    Write a complete python file that will print\
+      \ the tree\n\n    (1 (2 (3 4 5 6) (7 8)) (9 10 (11 12)))\n\n    Call the root\
+      \ of the tree 'root'.\n    Then print out str(root) and return the code in ```python  ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.."
+  assert:
+  - type: python
+    value: file://make_tree_from_text.py:assert_tree_creation
+- description: Test if the model can write a Python script that merges a list of file
+    paths into 16 files of approximately equal size.
+  vars:
+    prompt: I have a list of several thousand file paths in /tmp/files. Write a python
+      script that merges the content into 16 files called /tmp/merged_%d for i in
+      0..15 where each is approximately the same size. "/tmp/files" is a list of file
+      paths, one per line.
+  assert:
+  - type: python
+    value: file://merge_into_16.py:assert_python_file_merger
+- description: Test if the model can generate a numba implementation of the Levenshtein
+    distance algorithm.
+  vars:
+    prompt: Write me a numba implementation of levenshtein distance, taking two numpy
+      int arrays. Call it levenshtein. Run it in nopython mode. Character swaps are
+      cost 2 and return the code in ```python literals and donot include hypen in it Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..
+  assert:
+  - type: python
+    value: file://numba_levenshtein.py:get_assertion
+- description: Test if a model correctly understands how advanced indexing works in
+    numpy.
+  vars:
+    prompt: 'What will this program print:
+
+
+      ```python
+
+      import numpy as np
+
+
+      array = np.zeros((10, 20, 30))
+
+      idxs = [1, 2, 3]
+
+
+      print(array[idxs])
+
+      ```'
+  assert:
+  - type: python
+    value: file://numpy_advanced_index.py:assert_numpy_advanced_indexing
+- description: Test if a model can identify the _ix function as a method for simplifying
+    some code.
+  vars:
+    prompt: "I want to vectorize a function\n\nframe = np.zeros((out_h, out_w, 3),\
+      \ dtype=np.uint8)\nfor i, val1 in enumerate(rows):\n    for j, val2 in enumerate(cols):\n\
+      \        for k, val3 in enumerate(ch):\n            # Assuming you want to store\
+      \ the pair as tuples in the matrix\n            frame[i, j, k] = image[val1,\
+      \ val2, val3]\n\nout.write(np.array(frame))\n\nwith a simple numpy function\
+      \ that does something like this what is it called"
+  assert:
+  - type: python
+    value: file://numpy_ix.py:assert_numpy_ix_identification
+- description: 'Test if the model can generate a basic python program that prints '
+  vars:
+    prompt: Write a python program that prints the string "hello world" and tell me
+      how it works in a sentence and return the code in ```python  ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.
+  assert:
+  - type: python
+    value: file://print_hello.py:assert_python_hello_world
+- description: 'Test if the model can generate a program that prints '
+  vars:
+    prompt: "Write a single file that I can save as foo.py.rs that I can run as either\
+      \ a rust program or a python program, and so both will print \"hello world\"\
+      . Specifically if I run `python foo.py.rs` or `rustc -o a.out foo.py.rs && ./a.out`\
+      \ I should see \"hello world\" printed to the console.\n\nTo help you out, here's\
+      \ a valid answer for how to do this in C:\n\n```\n#include <stdio.h>\n#define\
+      \ sdf b /*                                                                 \
+      \                                                \nprint(\"hello world\")  \
+      \                                                                          \
+      \                                 \n\"\"\"                                 \
+      \                                                                          \
+      \                   \n#define wer b */\n\nint main() {\n  printf(\"hello world\\\
+      n\");\n}\n\n#define ert s \"\"\"\n```"
+  assert:
+  - type: python
+    value: file://print_hello_poly.py:evaluate_polyglot_code
+- description: Test if the model can generate a C++ program that defines dataflow
+    DSL.
+  vars:
+    prompt: 'Write a C++ class Const, Square, Print so that I can write, for example,
+
+
+      Cost(5) >> Square() >> Inc() >> Inc() >> Print()
+
+
+      and the resulting python program will print 27 to the screen and return the code in ```c ``` literals and donot include hypen in code Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..'
+  assert:
+  - type: python
+    value: file://program_pipes_cpp.py:check_cpp_dataflow_dsl
+- description: Test if the model can generate a python program that defines dataflow
+    DSL.
+  vars:
+    prompt: 'Write a python class Const, Square, Print so that I can write,and return the code in ```python ``` literals and do not include hypen in it Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens. for example,
+
+
+      Cost(5) >> Square() >> Inc() >> Inc() >> Print()
+
+
+      and the resulting python program will print 27 to the screen.'
+  assert:
+  - type: python
+    value: file://program_pipes_python.py:assert_dataflow_dsl
+- description: Test if the model can implement a sqrt function.
+  vars:
+    prompt: Tell me how to compute sqrt() in python without using the sqrt() function,
+      then give me a function to do this. I want the answer as precise as possible.
+      Call the function my_sqrt().
+  assert:
+  - type: python
+    value: file://program_sqrt.py:assert_sqrt_implementation
+- description: Test if a model can write a program that directly writes a jpeg file.
+    This requires precise understanding of the jpeg spec.
+  vars:
+    prompt: 'Write a python program that, manually, draws a red triangle on a white
+      background and saves it as a 200x200 gif file. Do not use any graphics libraries.
+      Write the gif byte by byte. Output the gif file to stdout  and return the code in ```python ``` literals and do not include hypen in it Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.
+
+
+      I will evaluate your program by running `python your_soln.py > /tmp/a.gif` and
+      then view the output file.'
+  assert:
+  - type: python
+    value: file://python_jpeg.py:assert_red_triangle_gif
+- description: Test if the model can parallelize a python program to perform a wordcount.
+  vars:
+    prompt: 'Write a self-contained Python program that prints a JSON output of how
+      often each word appears in a text file located in /tmp/file.txt. So if the file
+      contains "This is is is, an example" then the program should print to stdout.
+
+
+      {"This": 1, "is": 2, "is,":1, "an":1, "example":1}
+
+
+      The program should be run by calling /path/to/python_word_count with no arguments.
+
+
+      Make it run in parallel on 4 cores at the same time, each taking 1/4 of the
+      file.
+
+      Print out 4 different json dicts, one per line. I''ll do the mergin and return the code in ```python ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..'
+  assert:
+  - type: python
+    value: file://python_parallel_wordcount.py:run_test
+- description: Test if a model can convert a python program to c, with a loop that
+    makes it difficult.
+  vars:
+    prompt: 'Convert this to c and return it in ```c literals and do not include hypen in code Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..
+
+
+      def foo(x):
+
+      sum = 0
+
+      for i in range(x):
+
+      x += i
+
+      sum += x
+
+      return sum'
+  assert:
+  - type: python
+    value: file://python_to_c_loop_update.py:check_assertion
+- description: Test if the model can identify the buf and fix a program that handles
+    python tracebacks. Useful to know if the model can handle more advanced python
+    libraries.
+  vars:
+    prompt: "Fix this program. Make sure to keep the format \"var: value and return the code in ```python ``` literals and do not include hypen in it Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens\".\n\nimport\
+      \ traceback\n\ndef foo():\n    y = 6\n    raise Exception(\"This is a test exception\"\
+      )\n\ndef crashes():\n    x = 5\n    foo()\n\nif __name__ == \"__main__\":\n\
+      \    try:\n        crashes()\n    except:\n        # extract stack frames\n\
+      \        stack = traceback.extract_stack()\n        # print all locals in each\
+      \ stack frame\n        for frame in stack:\n            for k,v in frame.locals.items():\n\
+      \                print(k + \": \" + str(v))"
+  assert:
+  - type: python
+    value: file://python_traceback.py:assert_python_traceback_fix
+- description: Test if the model can resize several images in a given subdirectory.
+  vars:
+    prompt: Write a function resize_image in Python that takes a folder path as input
+      and looks for all of the image files in that folder using only Pillow, resizing
+      them to 32x32 and overwriting them. Just give me the Python code that I can
+      run with python code.py and the default folder is /tmp and return the function in ```python ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..
+  assert:
+  - type: python
+    value: file://py_image_resize.py:get_assertion
+- description: Test if the model can write a Python function with a straightforward
+    regex.
+  vars:
+    prompt: 'Write a function called `match` in Python that uses a regex to find any
+      word repeated 5 times or more. Return that word. If no word is repeated 5 times
+      or more, return an empty string and return the code in ```python ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..
+
+      '
+  assert:
+  - type: python
+    value: file://regex_remove_5_words.py:assert_regex_function
+- description: Test if the model can write a rust program that performs parallel word
+    counting.
+  vars:
+    prompt: 'Write a self-contained Rust program that prints a JSON output of how
+      often each word appears in a text file located in /tmp/file.txt. So if the file
+      contains "This is is is, an example" then the program should print to stdout.
+
+
+      {"This": 1, "is": 2, "is,": 1, "an": 1, "example": 1}
+
+
+      Don''t import any crates that would require a Cargo.toml file. I''ll just compile
+      it with `rustc yourfile.rs` and it should work. The program should be run by
+      calling /path/to/rust_word_count with no arguments.
+
+
+      Make it run in parallel on 4 cores at the same time, each job taking ~1/4 of
+      the file.
+
+      Print out 4 different json dicts, one per line. I''ll do the merging.'
+  assert:
+  - type: python
+    value: file://rust_parallel_wordcount.py:get_assertion
+- description: Test if the model can write a rust program that performs word counting.
+  vars:
+    prompt: 'Write a self-contained Rust program that prints a JSON output of how
+      often each word appears in a text file located in /tmp/file.txt. So if the file
+      contains "This is is is, an example" then the program should print to stdout.
+
+
+      {"This": 1, "is": 2, "is,": 1, "an": 1, "example": 1}
+
+
+      Don''t import any crates that would require a Cargo.toml file. I''ll just compile
+      it with `rustc yourfile.rs` and it should work. The program should be run by
+      calling /path/to/rust_word_count with no arguments'
+  assert:
+  - type: python
+    value: file://rust_word_count.py:assert_rust_word_count
+- description: Test if a model knows how to get the HTML for the entire webpage; not
+    just the body.
+  vars:
+    prompt: I have a webpage that's open in a chrome browser but the page no longer
+      exists. What javascript should I type in the console to get a copy of the entire
+      page html?
+  assert:
+  - type: python
+    value: file://save_expired_html.py:assert_html_recovery_knowledge
+- description: Test if the model can significantly shorten a repetitive C functions.
+  vars:
+    prompt: 'Code golf this function to be a lot shorter. You only get points if it''s
+      <300 bytes (not counting whitespace) and return the code in ```c literals and do not include hypen in code. Keep the name `stepper` Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.
+
+
+      ```
+
+      void stepper(int xw) {
+
+      int Steps = 0;
+
+      for (int x = 0; x < xw; x++) {
+
+      switch (Steps) {
+
+      case 0:
+
+      digitalWrite(1, 0);
+
+      digitalWrite(2, 0);
+
+      digitalWrite(3, 0);
+
+      digitalWrite(4, 1);
+
+      break;
+
+      case 1:
+
+      digitalWrite(1, 0);
+
+      digitalWrite(2, 0);
+
+      digitalWrite(3, 1);
+
+      digitalWrite(4, 1);
+
+      break;
+
+      case 2:
+
+      digitalWrite(1, 0);
+
+      digitalWrite(2, 0);
+
+      digitalWrite(3, 1);
+
+      digitalWrite(4, 0);
+
+      break;
+
+      case 3:
+
+      digitalWrite(1, 0);
+
+      digitalWrite(2, 1);
+
+      digitalWrite(3, 1);
+
+      digitalWrite(4, 0);
+
+      break;
+
+      case 4:
+
+      digitalWrite(1, 0);
+
+      digitalWrite(2, 1);
+
+      digitalWrite(3, 0);
+
+      digitalWrite(4, 0);
+
+      break;
+
+      case 5:
+
+      digitalWrite(1, 1);
+
+      digitalWrite(2, 1);
+
+      digitalWrite(3, 0);
+
+      digitalWrite(4, 0);
+
+      break;
+
+      case 6:
+
+      digitalWrite(1, 1);
+
+      digitalWrite(2, 0);
+
+      digitalWrite(3, 0);
+
+      digitalWrite(4, 0);
+
+      break;
+
+      case 7:
+
+      digitalWrite(1, 1);
+
+      digitalWrite(2, 0);
+
+      digitalWrite(3, 0);
+
+      digitalWrite(4, 1);
+
+      break;
+
+      default:
+
+      digitalWrite(1, 0);
+
+      digitalWrite(2, 0);
+
+      digitalWrite(3, 0);
+
+      digitalWrite(4, 0);
+
+      break;
+
+      }
+
+      Steps = (Steps + 1) % 8;
+
+      }
+
+      }
+
+      ```'
+  assert:
+  - type: python
+    value: file://shorten_c_function.py:check_c_code_golf
+- description: Test if the model can significantly shorten a repetitive C functions.
+  vars:
+    prompt: "Code golf this function to be a lot shorter. You only get points if it's\
+      \ <200 bytes (not counting whitespace) and return the code in ```c literals and do not include hypen in code Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens. Keep the function named `count`.\n```c\n\
+      int count() {\n    int ROWS = 8;\n    int COLS = 8;\n    int count = 0;\n  \
+      \  for (int i = 0; i < 1<<16; i++) {\n        long long unsigned int array =\
+      \ ((i & 0xf) << 9) | ((i & 0xf0) << (9 + 8 - 4)) | ((i & 0xf00) << (9 + 8 -\
+      \ 4 + 8 - 4)) | ((i & 0xf000) << (9 + 8 - 4 + 8 - 4 + 8 - 4));\n        long\
+      \ long unsigned int init = array;\n        long long unsigned int temp = array;\n\
+      \        for (int i = 1; i < ROWS - 1; i++) {\n            for (int j = 1; j\
+      \ < COLS - 1; j++) {\n                // Calculate bit positions\n         \
+      \       int pos = i * COLS + j;\n                int topPos = (i - 1) * COLS\
+      \ + j;\n                int leftPos = i * COLS + (j - 1);\n                int\
+      \ bottomPos = (i + 1) * COLS + j;\n                int rightPos = i * COLS +\
+      \ (j + 1);\n                // Get the values of the neighbors\n           \
+      \     int cell = (temp >> pos) & 1;\n                int top = (temp >> topPos)\
+      \ & 1;\n                int left = (temp >> leftPos) & 1;\n                int\
+      \ bottom = (temp >> bottomPos) & 1;\n                int right = (temp >> rightPos)\
+      \ & 1;\n                // Sum the values of the neighbors\n               \
+      \ int sum = top + left + bottom + right;\n                // Update the cell\
+      \ if all neighbors are 0 and the cell itself is 1\n                if (sum ==\
+      \ 0 && cell == 1) {\n                    array &= ~(1ULL << pos);\n        \
+      \        }\n            }\n        }\n        count += (init == array);\n  \
+      \  }\n    return count;\n}\n```"
+  assert:
+  - type: python
+    value: file://shorten_c_function_hard.py:check_c_short_and_correct
+- description: Test if the model can shorten a line of python with an equal line.
+  vars:
+    prompt: 'Shorten this python code. Keep the name the same.
+
+      ```
+
+      def foo(arr, keys):
+
+      return [[x[y] if y in x else -5 for y in keys] for x in arr]
+
+      ```
+      return the shorten code in ```python ``` these literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.'
+  assert:
+  - type: python
+    value: file://shorten_python_if_missing.py:check_response
+- description: This test case checks if the model can predict what the gradient of
+    a variable is in PyTorch.
+  vars:
+    prompt: 'What will this function print
+
+
+      ```
+
+      def diff_round(x, decimals=1):
+
+      scale_factor = (10 ** decimals)
+
+      x = x * scale_factor
+
+      diff = (1 + 1e-2) * x - torch.floor(x)
+
+      x = x - diff + (torch.floor(x) + torch.where(diff >= 0.5, 1, 0))
+
+      x = x / scale_factor
+
+      return x
+
+
+      g = torch.tensor([.99, 1.54, 1.9], dtype=torch.float32, requires_grad=True)
+
+      loss = torch.sum(diff_round(g, 1))
+
+      loss.backward()
+
+      print(g.grad.sum())
+
+      ```'
+  assert:
+  - type: python
+    value: file://simulate_torch_grad.py:get_score
+- description: Test if the model knows how to use the strided trick with numpy.
+  vars:
+    prompt: 'Write a function strides() that given an array of tokens T as numpy array,
+      using strided trick, returns [T[0:50], T[10:60], T[20: 70] ... ]'
+  assert:
+  - type: python
+    value: file://strided_trick.py:assert_strided_numpy
+- description: This test case is designed to check if the model can print out the
+    tokens in a AutoTokenizer's vocabulary.
+  vars:
+    prompt: How do I get all tokens in a AutoTokenizer?
+  assert:
+  - type: python
+    value: file://tokenizer_vocab.py:assert_contains_get_vocab
+- description: Test if the model can solve a rather hard dynamic programming problem
+  vars:
+    prompt: 'A binary 8x8 matrix is ''unholy'' if there are no isolated 1s. A 1 is
+      isolated if there isn''t another 1 in any of the 4 direct cardinal directions.
+      Write a C program that counts the total number of unholy 8x8 matricies.
+
+      step = """To solve this question:
+
+      - Use bit arithmetic and an unsigned long to represent the matrix.
+
+      - Write a function is_unholy that tests if a matrix is unholy by bit-shifting
+      and masking.
+
+
+      Use a dynamic program to count the number of unholy matricies.
+
+      - Recurse on the number of rows the matrix has.
+
+      - Enumerate all 2^16 next two rows. This is enough to completely isolate the
+      prior solutions from the next.
+
+
+      Write out a plan for the program, and then implement the plan in C.and return the code in ```c ``` literals and do not include hypen in it Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens."""'
+  assert:
+  - type: python
+    value: file://unholy_matrix.py:get_assertion
+- description: Test if a model can do basic math with some EE equations.
+  vars:
+    prompt: I measure a voltage drop of 30mv over a 2.5 ohm resistor. How long will
+      a 3Ah battery last? Write your ansser 'XXX hours'
+  assert:
+  - type: python
+    value: file://unit_conversion_math.py:check_battery_calculation
+- description: Test if a model can write upython code with an obscure module.
+  vars:
+    prompt: Write a python program that I can use to run on my raspberry pi pico w
+      zero that will check for mqtt messages. Don't block, and blink the LED on every
+      loop iteration so I know it's polling. When it gets a message then set the LED
+      solid for a second.
+  assert:
+  - type: python
+    value: file://upython_mqtt.py:get_assert
+- description: Test if the model can follow vague instructions for how to print IDs
+    following an example.
+  vars:
+    prompt: 'Write a python program that for ids like
+
+
+      2401_002
+
+
+      For months 1..12 and ids 1..3
+
+
+      so like 24{month}_{id}
+
+
+      print all the ids and return the code in ```python ``` literals and donot give hash in code give hypen Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.'
+  assert:
+  - type: python
+    value: file://vague_loop_format.py:test_vague_loop_format
+- description: Test if the model can infer what data to sum and what to ignore by
+    example with vague instructions.
+  vars:
+    prompt: 'Here''s some data
+
+      QUERY A361
+
+      Found at: 160392127418
+
+      Number of times present: 4
+
+
+
+      Found at: 150158692866
+
+      Number of times present: 3
+
+
+
+      Found at: 122340445248
+
+      Number of times present: 17
+
+
+
+      Found at: 137248651778
+
+      Number of times present: 84
+
+
+
+      Found at: 131891981708
+
+      Number of times present: 66
+
+
+
+      QUERY 32B57
+
+      Found at: 194561247604
+
+      Number of times present: 4
+
+
+
+      Found at: 82888490886
+
+      Number of times present: 3
+
+
+
+      Found at: 115836535414
+
+      Number of times present: 19
+
+
+
+      Found at: 79615924948
+
+      Number of times present: 80
+
+
+      Write a python function called `process` that will take data like this as an
+      argument and return a dict where the keys are the like A361/32B57 and the values
+      are how often its present in total and return the code in ```python  ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..'
+  assert:
+  - type: python
+    value: file://vague_sum_data.py:assert_sum_some_data
+- description: Test if the model can replace a for loop with a vectorized version.
+  vars:
+    prompt: "Vectorize this update loop. Call the function `update`and return the code in ```python literals and donot include hypen in it: Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens.\n\nimport numpy\
+      \ as np\n\ndef update(high, highest_number, delta):\n    for i in range(len(high)):\n\
+      \        if i != highest_number:\n            high[i] = min(high[i], high[highest_number]\
+      \ + delta[highest_number] - delta[i])\n    return high"
+  assert:
+  - type: python
+    value: file://vectorize_small_update.py:check
+- description: Test if the model can generate an HTML file with WebGL code that draws
+    an image.
+  vars:
+    prompt: Draw an image of a house with a chimney using WebGL in a single HTML file.
+      Make the canvas take the full page.
+  assert:
+  - type: python
+    value: file://webgl_triangle.py:check_html_webgl_house
+- description: Test if the model can interpret vague questions and will respond with
+    the answer I want, not the answer that's easy to find.
+  vars:
+    prompt: What do I do to fix AutoModel.from_pretrained to make it auto model with
+      lm head
+  assert:
+  - type: python
+    value: file://what_is_automodel.py:check_automodel_response
+- description: Test if the model knows what ERR_BLOCKED_BY_ORB means.
+  vars:
+    prompt: What does ERR_BLOCKED_BY_ORB mean?
+  assert:
+  - type: python
+    value: file://what_is_blockbyorb.py:assert_blocked_by_orb_explanation
+- description: This test case checks if models can format f strings with floats.
+  vars:
+    prompt: Python format {sdf} to 3 decimal digits
+  assert:
+  - type: python
+    value: file://what_is_formatfloat.py:assert_float_format
+- description: This test case is designed to check if the model can correctly identify
+    the Python operator used for the tilde (~) symbol.
+  vars:
+    prompt: In python what __thing__ do I use for ~, kind of like how __add__ is for
+      +?
+  assert:
+  - type: python
+    value: file://what_is_inv.py:assert_python_tilde_operator
+- description: This test case checks if the model knows lpr commands.
+  vars:
+    prompt: I have a .ps file that I want to print from my mac. I want to know the
+      commands to use.
+  assert:
+  - type: python
+    value: file://what_is_oraw.py:get_assert
+- description: This test case checks if the model can say how to properly get the
+    end of a slice.
+  vars:
+    prompt: How do I get sice(0, 5).end?
+  assert:
+  - type: python
+    value: file://what_is_slice_stop.py:assert_slice_end_explanation
+- description: This test case checks if the model knows what latex package to import
+    for the Sbox environment to work.
+  vars:
+    prompt: What latex package has the Sbox env?
+  assert:
+  - type: python
+    value: file://which_package_sbox.py:check_sbox_package
+- description: Test if the model can implement some string logic given a fuzzy description.
+  vars:
+    prompt: "Given a parse function like\n\ndef parse_transcript(content):\n    transcript_segments\
+      \ = []\n    pattern = r'\\[(\\d{2}:\\d{2}:\\d{2}\\.\\d{3}) --> (\\d{2}:\\d{2}:\\\
+      d{2}\\.\\d{3})\\]  (.*)'\n    matches = re.findall(pattern, content)\n\n   \
+      \ for start_time, end_time, text in matches:\n        start_seconds = timedelta(hours=int(start_time[:2]),\
+      \ minutes=int(start_time[3:5]), seconds=int(start_time[6:8]), milliseconds=int(start_time[9:])).total_seconds()\n\
+      \        end_seconds = timedelta(hours=int(end_time[:2]), minutes=int(end_time[3:5]),\
+      \ seconds=int(end_time[6:8]), milliseconds=int(end_time[9:])).total_seconds()\n\
+      \        transcript_segments.append((start_seconds, end_seconds, text))\n\n\
+      \    return transcript_segments\n\n\nfor data like\n\n[00:00:14.240 --> 00:00:14.420]\
+      \   the\n[00:00:14.420 --> 00:00:14.860]   robust\n[00:00:14.860 --> 00:00:15.020]\
+      \  ness\n[00:00:15.020 --> 00:00:15.140]   of\n[00:00:15.140 --> 00:00:15.500]\
+      \   neural\n[00:00:15.500 --> 00:00:15.870]   networks\n[00:00:15.870 --> 00:00:16.200]\
+      \  .\n[00:00:16.200 --> 00:00:16.410]   And\n[00:00:16.410 --> 00:00:16.700]\
+      \   this\n[00:00:16.700 --> 00:00:16.840]   is\n[00:00:16.840 --> 00:00:17.200]\
+      \   joint\n\n\nwrite a merge() function that (1) calls parse and (2) merges\
+      \ words into sentences that end in period. Start with the first word and end\
+      \ with the period. Return a list of strings  and return the code in ```python ``` literals Please ensure all characters in the code and explanation are standard ASCII only — no Unicode characters like em dashes, smart quotes, or non-breaking hyphens..\n\"\"\"\n\ntest_case, answer =\
+      \ make_python_test([(\"\"\"merge(\"[00:00:14.240 --> 00:00:14.420]   the\\\\\
+      n[00:00:14.420 --> 00:00:14.860]   robust\\\\n[00:00:14.860 --> 00:00:15.020]\
+      \  ness\\\\n[00:00:15.020 --> 00:00:15.140]   of\\\\n[00:00:15.140 --> 00:00:15.500]\
+      \   neural\\\\n[00:00:15.500 --> 00:00:15.870]   networks\\\\n[00:00:15.870\
+      \ --> 00:00:16.200]  .\\\\n[00:00:16.200 --> 00:00:16.410]   And\\\\n[00:00:16.410\
+      \ --> 00:00:16.700]   this\\\\n[00:00:16.700 --> 00:00:16.840]   is\\\\n[00:00:16.840\
+      \ --> 00:00:17.200]   joint\\\\n\")\"\"\", \"[' the robustness of neural networks.',\
+      \ ' And this is joint']\")], header=\"\"\"\ndef parse_transcript(content):\n\
+      \    transcript_segments = []\n    pattern = r'\\[(\\d{2}:\\d{2}:\\d{2}\\.\\\
+      d{3}) --> (\\d{2}:\\d{2}:\\d{2}\\.\\d{3})\\]  (.*)'\n    matches = re.findall(pattern,\
+      \ content)\n\n    for start_time, end_time, text in matches:\n        start_seconds\
+      \ = timedelta(hours=int(start_time[:2]), minutes=int(start_time[3:5]), seconds=int(start_time[6:8]),\
+      \ milliseconds=int(start_time[9:])).total_seconds()\n        end_seconds = timedelta(hours=int(end_time[:2]),\
+      \ minutes=int(end_time[3:5]), seconds=int(end_time[6:8]), milliseconds=int(end_time[9:])).total_seconds()\n\
+      \        transcript_segments.append((start_seconds, end_seconds, text))\n\n\
+      \    return transcript_segments"
+  assert:
+  - type: python
+    value: file://whisper_merge.py:evaluate_transcript_merge_function
+- description: This test checks if the model can figure out the user has put an accidental
+    extra brace in the request body.
+  vars:
+    prompt: "Why isn't this working\n\n```\n@app.route('/getsimilar', methods=['GET'])\n\
+      def getsimilar():\n    print('args',request.args)\n    positive = request.args.get('positive',\
+      \ '')\n    positive = positive.split(\"##\")\n\n    negative = request.args.get('negative',\
+      \ '')\n    negative = negative.split(\"##\")\n\n    keep_yes = [i for i,x in\
+      \ enumerate(titles) if x in positive]\n    set1_yes = emb[keep_yes]\n\n    keep_no\
+      \ = [i for i,x in enumerate(titles) if x in negative]\n    set1_no = emb[keep_no]\n\
+      \n    print(\"OK\", len(set1_yes), len(set1_no))\n```\n\nI see\n\n```\nargs\
+      \ ImmutableMultiDict([('positive', 'Title: Towards Evaluating the Robustness\
+      \ of Neural Networks\\nAuthors: Nicholas Carlini; David Wagner'), ('negative',\
+      \ 'Title: On Evaluating Adversarial Robustness Authors: Nicholas Carlini; Anish\
+      \ Athalye; Nicolas Papernot; Wieland Brendel; Jonas Rauber; Dimitris Tsipras;\
+      \ Ian Goodfellow; Aleksander Madry; Alexey Kurakin}')])\nOK 1 0\n```\nWhy don't\
+      \ I see OK 1 1? Instead it just says OK 1 0. List exactly one reason explaining\
+      \ what's wrong and what one change would fix it.\njudge = \"I asked a question\
+      \ about why some code was incorrect. The answer is \\\"because the input contains\
+      \ an extra curly brace }\\\". Does this student answer say that?\\n\\n<A>\\\
+      n\\nAnswer either 'The student passes' or 'The student fails'.\""
+  assert:
+  - type: python
+    value: file://why_broken_flask_extra_brace.py:assert_identifies_extra_brace
+writeLatestResults: true
+commandLineOptions:
+  cache: true

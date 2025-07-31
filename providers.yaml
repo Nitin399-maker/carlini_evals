@@ -1,0 +1,7 @@
+providers:
+    - {id: openrouter:openai/o3-mini-high, config: { max_tokens: 8192} }
+    - {id: openrouter:openai/o4-mini-high, config: { max_tokens: 8192} }
+    - openrouter:openai/gpt-4.1
+    - openrouter:openai/gpt-4.1-mini
+    - openrouter:openai/gpt-4.1-nano
+    - openrouter:openai/gpt-4o

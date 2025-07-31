@@ -1,0 +1,23 @@
+
+description: "This test case checks if models can format f strings with floats."
+providers:
+  - {id: openrouter:anthropic/claude-3.7-sonnet, config: { max_tokens: 8192 }}
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "This test case checks if models can format f strings with floats."
+    vars:
+      prompt: |-
+        Python format {sdf} to 3 decimal digits
+    assert:
+      - type: python
+        value: "file://what_is_formatfloat.py:assert_float_format"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

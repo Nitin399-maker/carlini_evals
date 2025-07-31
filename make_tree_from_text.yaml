@@ -1,0 +1,41 @@
+description: "Test if the model can create a tree from a string."
+providers:
+- id: openai:chat:o4-mini
+  config:
+    max_tokens: 8192
+    reasoning_effort: high
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if the model can create a tree from a string."
+    vars:
+      prompt: |-
+          class Node:
+          def __init__(self, name, parent=None):
+              self.name = name
+              self.parent = parent
+              self.children = []
+              if parent:
+                  self.parent.children.append(self)
+          def __repr__(self):
+              if self.children == []:
+                  return self.name
+              return '('+self.name + ' ' + ' '.join(repr(c) for c in self.children)+')'
+              Write a complete python file that will print the tree
+
+              (1 (2 (3 4 5 6) (7 8)) (9 10 (11 12)))
+
+              Call the root of the tree 'root'.
+              Then print out str(root) return the code in ```python  ``` literals.
+    assert:
+      - type: python
+        value: "file://make_tree_from_text.py:assert_tree_creation"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

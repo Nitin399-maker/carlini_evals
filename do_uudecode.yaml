@@ -1,0 +1,25 @@
+
+description: "Test if the model can successfully uudecode a given string."
+providers:
+  - {id: openai:o3, config: { max_tokens: 8192} }
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if the model can successfully uudecode a given string."
+    vars:
+      prompt: |-
+        uudecode this string:
+
+        H,3DR-S<-"C(X,C<U#0HT.3(V-@T*-C`X,C8-"C(X,S8V#0HR,#<Q-0``
+    assert:
+      - type: python
+        value: "file://do_uudecode.py:check_uudecode_response"
+
+# Persist for the web viewer
+writeLatestResults: true
+# Ensure caching stays on
+commandLineOptions:
+  cache: true

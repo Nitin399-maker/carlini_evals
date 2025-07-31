@@ -1,0 +1,25 @@
+description: "Test if the model can generate a Python program that retrieves data from a SQL file."
+providers:
+- id: openai:chat:o3-mini
+  config:
+    max_tokens: 8192
+    reasoning_effort: high
+
+defaultTest:
+  assert: []
+  vars: {}
+
+tests:
+  - description: "Test if the model can generate a Python program that retrieves data from a SQL file."
+    vars:
+      prompt: |-
+        I have a sqlite3 database with the following schema: name TEXT, favorite_friend TEXT, age INT, profession TEXT.
+        Write me a python program that prints out the favorite friend of the youngest person who isn't anyone's favorite friend.
+        The database is called people.db and the table is called people and return the code in ```python ``` literals.
+    assert:
+      - type: python
+        value: "file://fancy_sql_process.py:assert_sql_query_response"
+
+writeLatestResults: true
+commandLineOptions:
+  cache: true
